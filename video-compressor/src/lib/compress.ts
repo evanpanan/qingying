@@ -38,14 +38,30 @@ export async function pickVideoFiles(): Promise<CompressInput[] | null> {
     })
   }
 
-  // Web: use a hidden file input.
+  // Web: use a hidden file input attached to the DOM.
+  // NOTE: the input must be appended to the document for .click() to
+  // reliably open the file picker in all browsers (Safari / WebKit in
+  // particular ignore clicks on detached file inputs).
   return new Promise((resolve) => {
     const input = document.createElement('input')
     input.type = 'file'
     input.multiple = true
     input.accept = 'video/*'
+    input.style.cssText =
+      'position:absolute;left:-9999px;top:0;width:0;height:0;opacity:0'
+    document.body.appendChild(input)
+
+    const cleanup = () => {
+      try {
+        document.body.removeChild(input)
+      } catch {
+        /* already removed */
+      }
+    }
+
     input.onchange = () => {
       if (!input.files || input.files.length === 0) {
+        cleanup()
         resolve(null)
         return
       }
@@ -54,9 +70,10 @@ export async function pickVideoFiles(): Promise<CompressInput[] | null> {
         name: f.name,
         size: f.size,
       }))
+      cleanup()
       resolve(inputs)
     }
-    // Handle cancel (some browsers don't fire change on cancel).
+
     input.click()
   })
 }

@@ -109,14 +109,8 @@ export default function Home({ onNavigate }: HomeProps) {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-br from-blue-200/40 to-indigo-200/20 rounded-full blur-3xl" />
 
         <div className="relative max-w-6xl mx-auto px-6 py-20 text-center">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-blue-700 text-xs font-medium border border-blue-100 shadow-sm mb-6">
-            <Sparkles className="w-3.5 h-3.5" />
-            轻影 LightVid · 视频压缩工具
-          </div>
-
           <h1 className="text-5xl md:text-6xl font-bold text-gray-900 tracking-tight mb-5">
             让视频更轻，
-            <br />
             <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
               让分享更快
             </span>
