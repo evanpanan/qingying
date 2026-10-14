@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>轻影 LightVid — 视频一键瘦身，体积减半画质不变</title>
+  <meta name="description" content="轻影是一款本地视频压缩工具，采用智能 H.264 压缩算法，最高可减少 80% 文件体积。支持 macOS 和 Windows，文件不上传，隐私安全。" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="#" class="logo">
+        <span class="logo-icon">
+          <svg viewBox="0 0 1024 1024" width="28" height="28" fill="none">
+            <rect width="1024" height="1024" rx="224" fill="url(#g)"/>
+            <path d="M448 384 L640 480 L448 576 Z" fill="#fff"/>
+            <path d="M416 704 L512 800 L608 704 L608 608 L416 608 Z" fill="#fff"/>
+            <rect x="480" y="768" width="64" height="128" rx="16" fill="#fff"/>
+            <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#2563eb"/><stop offset="100%" stop-color="#4f46e5"/>
+            </linearGradient></defs>
+          </svg>
+        </span>
+        <span class="logo-text">轻影<span class="logo-sub">LightVid</span></span>
+      </a>
+      <div class="nav-links">
+        <a href="#features">功能</a>
+        <a href="#how">使用</a>
+        <a href="#download">下载</a>
+        <a href="#faq">常见问题</a>
+      </div>
+      <a href="#download" class="nav-cta">免费下载</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <header class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-inner">
+      <div class="hero-badge">
+        <span class="dot"></span>
+        本地处理 · 隐私安全 · 文件不上传
+      </div>
+      <h1 class="hero-title">轻影</h1>
+      <p class="hero-subtitle">视频一键瘦身，体积减半画质不变</p>
+      <p class="hero-desc">
+        采用智能 H.264 压缩算法，最高可减少 <strong>80%</strong> 文件体积。<br/>
+        轻松解决微信、邮件、网盘上传视频受限的烦恼。
+      </p>
+      <div class="hero-actions">
+        <a href="#download" class="btn btn-primary">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          立即下载
+        </a>
+        <a href="#how" class="btn btn-ghost">了解更多</a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><span class="stat-num">80%</span><span class="stat-label">最高压缩率</span></div>
+        <div class="stat-divider"></div>
+        <div class="stat"><span class="stat-num">0</span><span class="stat-label">文件上传</span></div>
+        <div class="stat-divider"></div>
+        <div class="stat"><span class="stat-num">10+</span><span class="stat-label">格式支持</span></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- App Preview -->
+  <section class="preview">
+    <div class="preview-frame">
+      <div class="preview-window">
+        <div class="preview-titlebar">
+          <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+          <span class="preview-title">轻影 — 视频压缩</span>
+        </div>
+        <div class="preview-body">
+          <div class="preview-upload">
+            <div class="preview-upload-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+            </div>
+            <p class="preview-upload-title">选择视频文件</p>
+            <p class="preview-upload-desc">点击或拖入视频，支持批量选择</p>
+            <div class="preview-btn">添加本地视频</div>
+          </div>
+          <div class="preview-card">
+            <div class="preview-card-icon">🎬</div>
+            <div class="preview-card-info">
+              <p class="preview-card-name">我的旅行视频.mp4</p>
+              <p class="preview-card-size">1.2 GB → <span>320 MB</span></p>
+              <div class="preview-progress"><div class="preview-progress-bar" style="width:73%"></div></div>
+            </div>
+            <span class="preview-badge">-73%</span>
+          </div>
+          <div class="preview-card done">
+            <div class="preview-card-icon">🎬</div>
+            <div class="preview-card-info">
+              <p class="preview-card-name">产品演示.mov</p>
+              <p class="preview-card-size">856 MB → <span>214 MB</span></p>
+            </div>
+            <span class="preview-badge success">-75%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features" class="features">
+    <div class="section-head">
+      <h2>为什么选择轻影</h2>
+      <p>专为日常视频压缩打造，简单、快速、安全</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon blue">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <h3>极速压缩</h3>
+        <p>基于原生 FFmpeg 引擎，充分利用硬件加速，压缩速度远超在线工具。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h3>隐私安全</h3>
+        <p>所有处理均在本地完成，视频文件绝不会上传到任何服务器。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <h3>全格式支持</h3>
+        <p>支持 MP4、MOV、MKV、AVI、WMV、FLV、WEBM 等 10+ 种视频格式。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon orange">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </div>
+        <h3>灵活设置</h3>
+        <p>4 档画质预设 + 4 档分辨率可选，自由平衡画质与体积。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon pink">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <h3>批量处理</h3>
+        <p>支持一次选择多个视频文件，逐个自动压缩，省时省力。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon teal">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <h3>历史记录</h3>
+        <p>自动保存压缩记录，关闭再打开依然可查，快速定位文件。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section id="how" class="how">
+    <div class="section-head">
+      <h2>三步完成压缩</h2>
+      <p>简单易用，无需专业知识</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>选择视频</h3>
+        <p>点击按钮或拖入视频文件，支持批量选择多个文件。</p>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>选择画质</h3>
+        <p>根据需求选择画质预设和输出分辨率，也可保持默认。</p>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>开始压缩</h3>
+        <p>点击开始，压缩完成后自动保存，可在访达中查看。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Download -->
+  <section id="download" class="download">
+    <div class="section-head light">
+      <h2>下载轻影</h2>
+      <p>支持 macOS 和 Windows，完全免费</p>
+    </div>
+    <div class="download-cards">
+      <div class="download-card macos">
+        <div class="download-card-head">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          <div>
+            <h3>macOS</h3>
+            <p>支持 Apple Silicon 与 Intel</p>
+          </div>
+        </div>
+        <ul class="download-info">
+          <li><span>版本</span><strong>v1.0.0</strong></li>
+          <li><span>大小</span><strong>约 25 MB (DMG)</strong></li>
+          <li><span>系统</span><strong>macOS 12+</strong></li>
+        </ul>
+        <a href="downloads/轻影_1.0.0_aarch64.dmg" class="btn btn-primary btn-block" download>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          下载 macOS 版
+        </a>
+      </div>
+
+      <div class="download-card windows">
+        <div class="download-card-head">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor"><path d="M3 12V5.5l7 1.3V12H3zm0 6.5V13h7v5.2L3 18.5zM11 6.3l9-1.6V12h-9V6.3zM20 13v7.3l-9-1.6V13h9z"/></svg>
+          <div>
+            <h3>Windows</h3>
+            <p>支持 Windows 10 及以上</p>
+          </div>
+          <span class="coming-soon">即将推出</span>
+        </div>
+        <ul class="download-info">
+          <li><span>版本</span><strong>v1.0.0</strong></li>
+          <li><span>大小</span><strong>约 30 MB (EXE)</strong></li>
+          <li><span>系统</span><strong>Windows 10/11</strong></li>
+        </ul>
+        <button class="btn btn-primary btn-block" disabled>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          敬请期待
+        </button>
+        <p class="windows-note">Windows 版本将在近期发布，支持 NSIS 安装包。</p>
+      </div>
+    </div>
+    <p class="download-note">
+      安装包已包含 FFmpeg 引擎，无需额外安装。首次打开如遇安全提示，请在「系统设置 → 隐私与安全性」中允许打开。
+    </p>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="faq">
+    <div class="section-head">
+      <h2>常见问题</h2>
+      <p>关于轻影的常见疑问</p>
+    </div>
+    <div class="faq-list">
+      <details class="faq-item">
+        <summary>压缩后的视频保存在哪里？</summary>
+        <p>压缩后的视频会自动保存在原视频所在的文件夹中，文件名会在原名后添加 <code>_compressed</code> 后缀。压缩完成后可点击「在访达中显示」直接定位文件。</p>
+      </details>
+      <details class="faq-item">
+        <summary>视频会上传到服务器吗？</summary>
+        <p>不会。轻影的所有压缩处理均在本地完成，视频文件绝不会上传到任何服务器，完全保护您的隐私安全。</p>
+      </details>
+      <details class="faq-item">
+        <summary>支持哪些视频格式？</summary>
+        <p>支持 MP4、MOV、MKV、AVI、WMV、FLV、WEBM、M4V、3GP、MPG、TS 等 10+ 种常见视频格式，输出统一为 MP4 (H.264) 格式，兼容性最佳。</p>
+      </details>
+      <details class="faq-item">
+        <summary>压缩会损失画质吗？</summary>
+        <p>默认使用「标准」画质预设（CRF 26），在肉眼几乎看不出差异的前提下大幅减小体积。您也可以选择「原画无损」（CRF 18）获得近乎无损的压缩效果。</p>
+      </details>
+      <details class="faq-item">
+        <summary>支持批量压缩吗？</summary>
+        <p>支持。您可以一次选择多个视频文件，轻影会逐个自动压缩，无需手动操作。压缩过程中可随时查看每个文件的进度。</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <div class="logo">
+          <span class="logo-icon">
+            <svg viewBox="0 0 1024 1024" width="24" height="24" fill="none">
+              <rect width="1024" height="1024" rx="224" fill="url(#g2)"/>
+              <path d="M448 384 L640 480 L448 576 Z" fill="#fff"/>
+              <path d="M416 704 L512 800 L608 704 L608 608 L416 608 Z" fill="#fff"/>
+              <rect x="480" y="768" width="64" height="128" rx="16" fill="#fff"/>
+              <defs><linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#2563eb"/><stop offset="100%" stop-color="#4f46e5"/>
+              </linearGradient></defs>
+            </svg>
+          </span>
+          <span class="logo-text">轻影<span class="logo-sub">LightVid</span></span>
+        </div>
+        <p class="footer-tagline">视频一键瘦身，体积减半画质不变</p>
+      </div>
+      <div class="footer-col">
+        <h4>产品</h4>
+        <a href="#features">功能特性</a>
+        <a href="#how">使用教程</a>
+        <a href="#download">下载安装</a>
+      </div>
+      <div class="footer-col">
+        <h4>支持</h4>
+        <a href="#faq">常见问题</a>
+        <a href="mailto:support@lightvid.app">联系反馈</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 轻影 LightVid. 基于 FFmpeg 引擎 · 本地处理，隐私安全。</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

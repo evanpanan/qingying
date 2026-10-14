@@ -1,0 +1,45 @@
+# ===== Dependencies =====
+node_modules/
+**/node_modules/
+
+# ===== Build outputs =====
+dist/
+**/dist/
+dist-ssr/
+*.local
+
+# ===== Rust / Tauri build =====
+target/
+**/target/
+Cargo.lock.bak
+
+# ===== Bundled binaries (FFmpeg) =====
+# 请根据 README 说明手动下载 FFmpeg 二进制放入此目录
+video-compressor/src-tauri/binaries/*
+!video-compressor/src-tauri/binaries/.gitkeep
+
+# ===== Logs =====
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ===== Editor / OS =====
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+Thumbs.db
+
+# ===== Environment =====
+.env
+.env.local
+.env.*.local
