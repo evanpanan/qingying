@@ -149,6 +149,25 @@ export default function Home({ onNavigate }: HomeProps) {
             <Shield className="w-3.5 h-3.5" />
             本地处理 · 无需上传 · 隐私安全
           </p>
+
+          {/* Product Promo Video */}
+          <div className="mt-14 max-w-4xl mx-auto">
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-blue-500/20 ring-1 ring-gray-200/60 bg-gray-900">
+              <video
+                src="/qingying-promo.mp4"
+                autoPlay
+                muted
+                loop
+                playsInline
+                poster=""
+                className="w-full h-auto block"
+              />
+            </div>
+            <p className="text-xs text-gray-400 mt-3 inline-flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" />
+              轻影 LightVid · 一分钟了解产品核心功能
+            </p>
+          </div>
         </div>
       </section>
 
