@@ -101,7 +101,7 @@ const FAQS = [
   },
   {
     q: '打开应用时提示"已损坏"怎么办？',
-    a: '这是 macOS Gatekeeper 的安全提示。请右键点击应用选择"打开"，或在终端运行 `xattr -cr /Applications/轻影.app` 后重新打开。详见下载区的安装说明。',
+    a: '这是 macOS Gatekeeper 的安全提示。最简单的方法是使用下载区的「终端一键安装」命令，会自动完成安装并移除隔离属性。也可以手动将 app 拖入应用程序后右键选择"打开"。',
   },
 ]
 
@@ -272,7 +272,7 @@ export default function Home({ onNavigate }: HomeProps) {
                   <p className="text-xs text-gray-400">Apple Silicon / Intel</p>
                 </div>
               </div>
-              <p className="text-sm text-gray-500 mb-4">版本 1.0.0 · DMG 安装包 · 24 MB</p>
+              <p className="text-sm text-gray-500 mb-4">版本 1.0.0 · DMG 安装包 · 27 MB</p>
               <span className="inline-flex items-center gap-2 text-blue-600 font-medium text-sm group-hover:gap-3 transition-all">
                 <Download className="w-4 h-4" />
                 下载 macOS 版
@@ -300,40 +300,30 @@ export default function Home({ onNavigate }: HomeProps) {
 
           {/* macOS 安装说明 */}
           <div className="max-w-3xl mx-auto mt-10 bg-amber-50 border border-amber-100 rounded-2xl p-6 md:p-7">
-            <div className="flex items-start gap-3 mb-4">
+            <div className="flex items-start gap-3 mb-5">
               <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
                 <Info className="w-4 h-4 text-amber-600" />
               </div>
               <div>
                 <h3 className="font-semibold text-gray-800 text-sm mb-1">macOS 安装说明（首次打开必读）</h3>
-                <p className="text-xs text-gray-500">由于应用未经 Apple 公证，首次打开可能提示"已损坏"，请按以下步骤操作：</p>
+                <p className="text-xs text-gray-500">由于应用未经 Apple 公证，首次打开可能提示"已损坏"。推荐使用方案一自动安装。</p>
               </div>
             </div>
 
-            <ol className="space-y-3 text-sm text-gray-700">
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-200 text-amber-800 text-xs font-bold flex items-center justify-center">1</span>
-                <span>下载完成后，双击 <code className="px-1.5 py-0.5 bg-white rounded text-xs font-mono text-amber-700">轻影_1.0.0_aarch64.dmg</code> 打开磁盘映像。</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-200 text-amber-800 text-xs font-bold flex items-center justify-center">2</span>
-                <span>将「轻影」图标拖入 <strong>Applications（应用程序）</strong> 文件夹。</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-200 text-amber-800 text-xs font-bold flex items-center justify-center">3</span>
-                <span>打开「应用程序」，<strong>右键点击「轻影」</strong>，选择<strong>「打开」</strong>，在弹窗中再次点击「打开」。</span>
-              </li>
-            </ol>
-
-            <div className="mt-5 pt-5 border-t border-amber-100">
-              <p className="text-xs text-gray-500 mb-2">如果右键仍无法打开，请打开「终端」运行以下命令移除隔离属性：</p>
+            {/* 方案一：终端一键安装 */}
+            <div className="bg-white rounded-xl border border-amber-200 p-4 mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded">推荐</span>
+                <h4 className="font-semibold text-gray-800 text-sm">方案一：终端一键安装（最可靠）</h4>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">打开「终端」（Launchpad → 其他 → 终端），复制粘贴以下命令并回车：</p>
               <div className="flex items-center gap-2 bg-gray-900 rounded-lg px-3 py-2.5">
                 <code className="flex-1 text-green-400 text-xs font-mono overflow-x-auto whitespace-nowrap">
-                  xattr -cr /Applications/轻影.app
+                  {`hdiutil attach ~/Downloads/轻影_1.0.0_aarch64.dmg -nobrowse && cp -R "/Volumes/轻影/轻影.app" /Applications/ && hdiutil detach "/Volumes/轻影" && xattr -cr /Applications/轻影.app && open /Applications/轻影.app`}
                 </code>
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText('xattr -cr /Applications/轻影.app')
+                    navigator.clipboard.writeText('hdiutil attach ~/Downloads/轻影_1.0.0_aarch64.dmg -nobrowse && cp -R "/Volumes/轻影/轻影.app" /Applications/ && hdiutil detach "/Volumes/轻影" && xattr -cr /Applications/轻影.app && open /Applications/轻影.app')
                     setCopiedCmd(true)
                     setTimeout(() => setCopiedCmd(false), 2000)
                   }}
@@ -343,7 +333,45 @@ export default function Home({ onNavigate }: HomeProps) {
                   <span className="text-xs">{copiedCmd ? '已复制' : '复制'}</span>
                 </button>
               </div>
-              <p className="text-xs text-gray-400 mt-2">运行命令后重新打开「轻影」即可正常使用。</p>
+              <p className="text-xs text-gray-400 mt-2">命令会自动完成：挂载 DMG → 安装到应用程序 → 移除安全隔离 → 启动应用。</p>
+            </div>
+
+            {/* 方案二：手动安装 */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <h4 className="font-semibold text-gray-800 text-sm mb-3">方案二：手动安装</h4>
+              <ol className="space-y-3 text-sm text-gray-700">
+                <li className="flex gap-3">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-200 text-amber-800 text-xs font-bold flex items-center justify-center">1</span>
+                  <span>双击 <code className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono text-amber-700">轻影_1.0.0_aarch64.dmg</code> 打开磁盘映像。</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-200 text-amber-800 text-xs font-bold flex items-center justify-center">2</span>
+                  <span>将「轻影」图标拖入 <strong>Applications（应用程序）</strong> 文件夹。</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-200 text-amber-800 text-xs font-bold flex items-center justify-center">3</span>
+                  <span>打开「应用程序」，<strong>右键点击「轻影」</strong>，选择<strong>「打开」</strong>，在弹窗中再次点击「打开」。</span>
+                </li>
+              </ol>
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <p className="text-xs text-gray-500 mb-2">如果右键仍提示"已损坏"，请运行以下命令后重新打开：</p>
+                <div className="flex items-center gap-2 bg-gray-900 rounded-lg px-3 py-2.5">
+                  <code className="flex-1 text-green-400 text-xs font-mono overflow-x-auto whitespace-nowrap">
+                    xattr -cr /Applications/轻影.app
+                  </code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText('xattr -cr /Applications/轻影.app')
+                      setCopiedCmd(true)
+                      setTimeout(() => setCopiedCmd(false), 2000)
+                    }}
+                    className="flex-shrink-0 flex items-center gap-1 text-gray-400 hover:text-white transition-colors"
+                  >
+                    {copiedCmd ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span className="text-xs">{copiedCmd ? '已复制' : '复制'}</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
