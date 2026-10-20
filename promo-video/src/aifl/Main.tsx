@@ -81,9 +81,33 @@ export const SFX: { from: number; src: string; volume: number }[] = [
 const sfxDuration = (s: { from: number; src: string }) =>
   s.src === 'keyboard.mp3' ? (s.from > 700 ? 44 : 24) : 90
 
-export const Main: React.FC = () => {
+// BGM：house-vibez 微调至 120 BPM 后从第 52 小节裁剪 60s
+// 120 BPM × 0.5s/拍 ⇒ 8s=16拍、2.5s=5拍、60s=120拍，所有场景边界精确落拍
+// trimBefore 补偿 mp3 裁剪引入的 ~1.9 帧相位偏移（渲后回测校正）
+export const BGM_VOLUME = 0.4
+const BGM_TRIM_BEFORE = 2 // 补偿 mp3 剪辑相位偏移
+const BGM_FADE_IN = 12   // 0.4s 淡入
+const BGM_FADE_OUT = 60  // 2s 淡出
+
+export const bgmVolume = (f: number) => {
+  const fadeIn = Math.min(1, f / BGM_FADE_IN)
+  const fadeOut = Math.min(1, Math.max(0, TOTAL - f) / BGM_FADE_OUT)
+  return BGM_VOLUME * Math.min(fadeIn, fadeOut)
+}
+
+export type MainProps = { bgm?: boolean }
+
+export const Main: React.FC<MainProps> = ({ bgm = true }) => {
   return (
     <AbsoluteFill style={{ backgroundColor: '#f2eee6' }}>
+      {bgm && (
+        <Audio
+          src={staticFile('audio/bgm-house-120.mp3')}
+          trimBefore={BGM_TRIM_BEFORE}
+          volume={bgmVolume}
+        />
+      )}
+
       {SFX.map((s, i) => (
         <Sequence key={`sfx-${i}`} from={s.from} durationInFrames={sfxDuration(s)}>
           <Audio src={staticFile(`audio/${s.src}`)} volume={s.volume} />

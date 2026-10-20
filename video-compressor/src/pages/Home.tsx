@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   Play,
   Zap,
@@ -15,6 +15,8 @@ import {
   Copy,
   Check,
   Info,
+  Volume2,
+  VolumeX,
 } from 'lucide-react'
 
 interface HomeProps {
@@ -108,6 +110,8 @@ const FAQS = [
 export default function Home({ onNavigate }: HomeProps) {
   const [openFaq, setOpenFaq] = useState<number | null>(null)
   const [copiedCmd, setCopiedCmd] = useState(false)
+  const [videoMuted, setVideoMuted] = useState(true)
+  const videoRef = useRef<HTMLVideoElement>(null)
 
   return (
     <div className="min-h-screen bg-white">
@@ -156,14 +160,22 @@ export default function Home({ onNavigate }: HomeProps) {
           <div className="mt-14 max-w-4xl mx-auto">
             <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-blue-500/20 ring-1 ring-gray-200/60 bg-gray-900">
               <video
+                ref={videoRef}
                 src="/qingying-promo.mp4"
                 autoPlay
-                muted
+                muted={videoMuted}
                 loop
                 playsInline
-                poster=""
                 className="w-full h-auto block"
               />
+              <button
+                onClick={() => setVideoMuted((m) => !m)}
+                aria-label={videoMuted ? '开启声音' : '关闭声音'}
+                className="absolute bottom-4 right-4 flex items-center gap-2 px-3.5 py-2 rounded-full bg-black/55 hover:bg-black/75 text-white text-xs font-medium backdrop-blur-sm transition-colors"
+              >
+                {videoMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                {videoMuted ? '开启声音' : '静音'}
+              </button>
             </div>
             <p className="text-xs text-gray-400 mt-3 inline-flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5" />
