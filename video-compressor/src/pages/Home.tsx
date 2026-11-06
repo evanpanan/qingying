@@ -86,6 +86,14 @@ const STEPS = [
 
 const FAQS = [
   {
+    q: '视频下载支持哪些平台？',
+    a: '支持抖音、小红书、Instagram、X。粘贴分享链接即可解析，短链和整段分享文案都能识别，视频与图集均可保存原片。',
+  },
+  {
+    q: '视频下载需要登录或安装软件吗？',
+    a: '不需要。直接在浏览器里粘贴链接即可解析下载，无需登录、无需安装。',
+  },
+  {
     q: '压缩后的视频画质会损失吗？',
     a: '采用 H.264 编码，「标准」模式下画质几乎无损，体积可减小 50%-80%。「无损」模式画质完全不变。',
   },
@@ -133,7 +141,7 @@ export default function Home({ onNavigate }: HomeProps) {
           </h1>
 
           <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8 leading-relaxed">
-            基于 FFmpeg 的开源视频压缩工具，支持 macOS 桌面端和在线浏览器压缩。
+            视频压缩 + 多平台下载，一款轻量工具全搞定。
             本地处理，隐私安全，画质高清，体积骤减。
           </p>
 
@@ -145,6 +153,14 @@ export default function Home({ onNavigate }: HomeProps) {
             >
               <Play className="w-4.5 h-4.5" />
               立即在线压缩
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigate('download')}
+              className="inline-flex items-center gap-2 px-7 py-3.5 bg-white text-blue-600 font-semibold rounded-full border border-blue-200 hover:border-blue-300 hover:bg-blue-50 transition-all"
+            >
+              <Link className="w-4.5 h-4.5" />
+              视频下载
             </button>
             <a
               href="#download"
@@ -193,7 +209,7 @@ export default function Home({ onNavigate }: HomeProps) {
       <section className="max-w-6xl mx-auto px-6 py-20">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-gray-900 mb-3">为什么选择轻影</h2>
-          <p className="text-gray-500">简洁、高效、安全的视频压缩体验</p>
+          <p className="text-gray-500">简洁、高效、安全的一站式视频工具</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -211,6 +227,44 @@ export default function Home({ onNavigate }: HomeProps) {
               <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Video download */}
+      <section className="max-w-6xl mx-auto px-6">
+        <div className="relative overflow-hidden rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50/80 to-violet-50/60 p-8 md:p-12">
+          <div className="grid md:grid-cols-2 gap-10 items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white text-indigo-700 text-xs font-medium mb-4 shadow-sm">
+                <Link className="w-3.5 h-3.5" />
+                多平台视频下载
+              </div>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+                粘贴链接，直接下载
+              </h2>
+              <p className="text-gray-600 mb-6 leading-relaxed">
+                抖音、小红书、Instagram、X 全支持，粘贴分享链接即可保存视频与图集原片。
+              </p>
+              <button
+                type="button"
+                onClick={() => onNavigate('download')}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold shadow-md shadow-blue-500/20 hover:shadow-lg transition-all"
+              >
+                <Link className="w-4 h-4" />
+                视频下载
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {DOWNLOAD_PLATFORMS.map((p) => (
+                <div
+                  key={p}
+                  className="flex items-center justify-center rounded-xl bg-white border border-indigo-100 py-4 text-sm font-medium text-gray-700 shadow-sm"
+                >
+                  {p}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -239,44 +293,6 @@ export default function Home({ onNavigate }: HomeProps) {
         </div>
       </section>
 
-      {/* Watermark-free download */}
-      <section className="max-w-6xl mx-auto px-6 py-20">
-        <div className="relative overflow-hidden rounded-3xl border border-gray-100 bg-gradient-to-br from-gray-50 to-white p-8 md:p-12">
-          <div className="grid md:grid-cols-2 gap-8 items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium mb-4">
-                <Link className="w-3.5 h-3.5" />
-                多平台视频下载
-              </div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
-                分享链接直接下载
-              </h2>
-              <p className="text-gray-500 mb-6 leading-relaxed">
-                粘贴分享链接，一键解析并下载视频或图集。
-              </p>
-              <button
-                type="button"
-                onClick={() => onNavigate('download')}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold shadow-md shadow-blue-500/20 hover:shadow-lg transition-all"
-              >
-                <Link className="w-4 h-4" />
-                视频下载
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2 md:justify-end">
-              {DOWNLOAD_PLATFORMS.map((p) => (
-                <span
-                  key={p}
-                  className="px-4 py-2 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-600 shadow-sm"
-                >
-                  {p}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Online CTA */}
       <section className="max-w-6xl mx-auto px-6 pb-20">
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-700 p-10 md:p-14 text-center">
@@ -286,9 +302,9 @@ export default function Home({ onNavigate }: HomeProps) {
           </div>
           <div className="relative">
             <Cloud className="w-12 h-12 text-white mx-auto mb-4" />
-            <h2 className="text-3xl font-bold text-white mb-3">不想下载？在线即用</h2>
+            <h2 className="text-3xl font-bold text-white mb-3">不想安装？在线即用</h2>
             <p className="text-blue-100 mb-6 max-w-xl mx-auto">
-              打开浏览器即可压缩视频，FFmpeg.wasm 本地运行，无需安装，无需上传
+              打开浏览器即可压缩视频，FFmpeg.wasm 本地运行，无需上传，开箱即用
             </p>
             <button
               type="button"
@@ -476,7 +492,7 @@ export default function Home({ onNavigate }: HomeProps) {
             轻影 LightVid
           </div>
           <p className="text-sm text-gray-400">
-            开源视频压缩工具 · 基于 FFmpeg · 本地处理，隐私安全
+            视频压缩与多平台下载 · 基于 FFmpeg · 开源免费
           </p>
           <p className="text-xs text-gray-300 mt-2">
             © 2026 轻影 LightVid
