@@ -1,3 +1,6 @@
+/** Web 端路由页面。 */
+export type Page = 'home' | 'compress' | 'download'
+
 export type QualityPreset = 'lossless' | 'high' | 'standard' | 'high-compress'
 
 export interface QualityOption {

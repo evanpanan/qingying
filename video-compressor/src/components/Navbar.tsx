@@ -1,8 +1,9 @@
-import { Play, Download, Sparkles } from 'lucide-react'
+import { Play, Download, Sparkles, Link } from 'lucide-react'
+import type { Page } from '../types'
 
 interface NavbarProps {
-  page: 'home' | 'compress'
-  onNavigate: (page: 'home' | 'compress') => void
+  page: Page
+  onNavigate: (page: Page) => void
 }
 
 export default function Navbar({ page, onNavigate }: NavbarProps) {
@@ -48,6 +49,18 @@ export default function Navbar({ page, onNavigate }: NavbarProps) {
           >
             <Sparkles className="w-3.5 h-3.5" />
             在线压缩
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate('download')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+              page === 'download'
+                ? 'text-blue-600 bg-blue-50'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            <Link className="w-3.5 h-3.5" />
+            去水印
           </button>
           <a
             href="#download"

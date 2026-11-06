@@ -17,11 +17,15 @@ import {
   Info,
   Volume2,
   VolumeX,
+  Link,
 } from 'lucide-react'
+import type { Page } from '../types'
 
 interface HomeProps {
-  onNavigate: (page: 'home' | 'compress') => void
+  onNavigate: (page: Page) => void
 }
+
+const DOWNLOAD_PLATFORMS = ['抖音', '小红书', 'Instagram', 'X']
 
 const FEATURES = [
   {
@@ -235,8 +239,46 @@ export default function Home({ onNavigate }: HomeProps) {
         </div>
       </section>
 
-      {/* Online CTA */}
+      {/* Watermark-free download */}
       <section className="max-w-6xl mx-auto px-6 py-20">
+        <div className="relative overflow-hidden rounded-3xl border border-gray-100 bg-gradient-to-br from-gray-50 to-white p-8 md:p-12">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium mb-4">
+                <Link className="w-3.5 h-3.5" />
+                多平台无水印
+              </div>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+                顺手把水印也去了
+              </h2>
+              <p className="text-gray-500 mb-6 leading-relaxed">
+                粘贴分享链接，一键解析无水印原片，支持视频与图集。
+              </p>
+              <button
+                type="button"
+                onClick={() => onNavigate('download')}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold shadow-md shadow-blue-500/20 hover:shadow-lg transition-all"
+              >
+                <Link className="w-4 h-4" />
+                去水印下载
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2 md:justify-end">
+              {DOWNLOAD_PLATFORMS.map((p) => (
+                <span
+                  key={p}
+                  className="px-4 py-2 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-600 shadow-sm"
+                >
+                  {p}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Online CTA */}
+      <section className="max-w-6xl mx-auto px-6 pb-20">
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-700 p-10 md:p-14 text-center">
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-10 left-10 w-32 h-32 bg-white rounded-full blur-2xl" />
