@@ -31,7 +31,7 @@ const PLATFORMS = ['抖音', '小红书', 'Instagram', 'X']
 const STEPS = [
   { num: '01', title: '复制链接', desc: '在 App 内点击分享，复制作品链接' },
   { num: '02', title: '粘贴解析', desc: '粘贴到输入框，点击「立即解析」' },
-  { num: '03', title: '无水印下载', desc: '预览确认后一键保存原片' },
+  { num: '03', title: '保存文件', desc: '预览确认后一键保存视频或图片' },
 ]
 
 const FAQS = [
@@ -82,6 +82,10 @@ export default function Downloader() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: text }),
       })
+      if (!res.ok) {
+        const json = await res.json().catch(() => null)
+        throw new Error(json?.error || '解析服务暂时不可用，请稍后重试')
+      }
       const json = await res.json().catch(() => null)
       if (!json?.ok) throw new Error(json?.error || '解析失败，请稍后重试')
       setData(json.data as ParseData)
@@ -118,16 +122,16 @@ export default function Downloader() {
         <div className="relative max-w-4xl mx-auto px-6 pt-16 pb-10 text-center">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/70 backdrop-blur border border-blue-100 text-blue-700 text-xs font-medium mb-5">
             <Sparkles className="w-3.5 h-3.5" />
-            无水印 · 原画质 · 多平台
+            原画质 · 多平台 · 直接下载
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight mb-4">
-            视频
+            多平台
             <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              去水印下载
+              视频下载
             </span>
           </h1>
           <p className="text-gray-600 max-w-xl mx-auto leading-relaxed">
-            粘贴分享链接，一键解析无水印原片，支持视频与图集。
+            粘贴分享链接，一键解析并下载视频或图集。
           </p>
 
           <div className="flex items-center justify-center gap-2 flex-wrap mt-6">
@@ -243,10 +247,11 @@ export default function Downloader() {
                   </div>
                   <a
                     href={proxyUrl(data.url, `${safeName(data.title || '轻影')}.mp4`)}
+                    download
                     className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold shadow-md shadow-blue-500/20 transition hover:shadow-lg"
                   >
                     <Download className="w-4 h-4" />
-                    下载无水印视频
+                    下载视频
                   </a>
                 </div>
               )}
@@ -257,6 +262,7 @@ export default function Downloader() {
                     <a
                       key={img.url}
                       href={proxyUrl(img.url, `${safeName(data.title || '轻影', i)}.jpg`)}
+                      download
                       className="group relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50 aspect-[3/4]"
                     >
                       <img

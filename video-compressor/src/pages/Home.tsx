@@ -246,13 +246,13 @@ export default function Home({ onNavigate }: HomeProps) {
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium mb-4">
                 <Link className="w-3.5 h-3.5" />
-                多平台无水印
+                多平台视频下载
               </div>
               <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
-                顺手把水印也去了
+                分享链接直接下载
               </h2>
               <p className="text-gray-500 mb-6 leading-relaxed">
-                粘贴分享链接，一键解析无水印原片，支持视频与图集。
+                粘贴分享链接，一键解析并下载视频或图集。
               </p>
               <button
                 type="button"
@@ -260,7 +260,7 @@ export default function Home({ onNavigate }: HomeProps) {
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold shadow-md shadow-blue-500/20 hover:shadow-lg transition-all"
               >
                 <Link className="w-4 h-4" />
-                去水印下载
+                视频下载
               </button>
             </div>
             <div className="flex flex-wrap gap-2 md:justify-end">

@@ -60,7 +60,7 @@ export default function Navbar({ page, onNavigate }: NavbarProps) {
             }`}
           >
             <Link className="w-3.5 h-3.5" />
-            去水印
+            视频下载
           </button>
           <a
             href="#download"
