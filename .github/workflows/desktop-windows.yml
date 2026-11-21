@@ -1,0 +1,44 @@
+name: Build Windows Desktop
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - video-compressor/src/**
+      - video-compressor/src-tauri/**
+      - video-compressor/package*.json
+      - .github/workflows/desktop-windows.yml
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: video-compressor
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: video-compressor/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci
+      - name: Prepare native engines
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force src-tauri/binaries | Out-Null
+          Invoke-WebRequest https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip -OutFile "$env:RUNNER_TEMP/ffmpeg.zip"
+          Expand-Archive "$env:RUNNER_TEMP/ffmpeg.zip" "$env:RUNNER_TEMP/ffmpeg"
+          $ffmpeg = Get-ChildItem "$env:RUNNER_TEMP/ffmpeg" -Filter ffmpeg.exe -Recurse | Select-Object -First 1
+          Copy-Item $ffmpeg.FullName src-tauri/binaries/ffmpeg-x86_64-pc-windows-msvc.exe
+          Invoke-WebRequest https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe -OutFile src-tauri/binaries/yt-dlp-x86_64-pc-windows-msvc.exe
+      - run: npm test
+      - run: npm run tauri:build -- --bundles nsis,msi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LightVid-Windows-1.1.0
+          path: |
+            video-compressor/src-tauri/target/release/bundle/nsis/*.exe
+            video-compressor/src-tauri/target/release/bundle/msi/*.msi

@@ -1,5 +1,5 @@
 /** Web 端路由页面。 */
-export type Page = 'home' | 'compress' | 'download'
+export type Page = 'home' | 'compress' | 'download' | 'convert' | 'desktop'
 
 export type QualityPreset = 'lossless' | 'high' | 'standard' | 'high-compress'
 

@@ -2,10 +2,22 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use serde::{Deserialize, Serialize};
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use tauri::{Emitter, Manager};
+
+fn media_command(path: impl AsRef<std::ffi::OsStr>) -> Command {
+    let mut command = Command::new(path);
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
+    #[cfg(not(target_os = "windows"))]
+    let _ = &mut command;
+    command
+}
 
 /// Compression quality presets mapped to x264 CRF values.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -57,6 +69,8 @@ impl ResolutionPreset {
 pub struct CompressionSettings {
     pub quality: QualityPreset,
     pub resolution: ResolutionPreset,
+    #[serde(default)]
+    pub format: Option<String>,
 }
 
 /// Result returned after compression.
@@ -95,7 +109,9 @@ fn resolve_ffmpeg_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
         ("x86_64", "windows") => "x86_64-pc-windows-msvc",
         ("x86", "windows") => "i686-pc-windows-msvc",
         (a, o) => {
-            return Err(format!("不支持的平台: {a}-{o}。请在 macOS 或 Windows 上使用。"));
+            return Err(format!(
+                "不支持的平台: {a}-{o}。请在 macOS 或 Windows 上使用。"
+            ));
         }
     };
     let dev_sidecar_name = format!("ffmpeg-{target_triple}");
@@ -115,7 +131,10 @@ fn resolve_ffmpeg_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
         app.path()
             .resource_dir()
             .ok()
-            .and_then(|d| d.parent().map(|p| p.join("binaries").join(&dev_sidecar_name)))
+            .and_then(|d| {
+                d.parent()
+                    .map(|p| p.join("binaries").join(&dev_sidecar_name))
+            })
             .unwrap_or_default(),
     ];
 
@@ -138,6 +157,20 @@ fn resolve_ffmpeg_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
 /// and emits `compress-progress` events to the frontend.
 #[tauri::command]
 async fn compress_video(
+    app: tauri::AppHandle,
+    task_id: String,
+    input_path: String,
+    output_path: String,
+    settings: CompressionSettings,
+) -> Result<CompressionResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        process_video(app, task_id, input_path, output_path, settings)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+fn process_video(
     app: tauri::AppHandle,
     task_id: String,
     input_path: String,
@@ -172,6 +205,30 @@ async fn compress_video(
         "-nostats".to_string(),
     ];
 
+    if let Some(format) = &settings.format {
+        let codec_args: Vec<&str> = match format.as_str() {
+            "mp4" | "mov" => vec![
+                "-c:v",
+                "libx264",
+                "-crf",
+                "22",
+                "-pix_fmt",
+                "yuv420p",
+                "-c:a",
+                "aac",
+                "-movflags",
+                "+faststart",
+            ],
+            "mkv" => vec!["-c:v", "libx264", "-crf", "22", "-c:a", "aac"],
+            "webm" => vec!["-c:v", "libvpx", "-b:v", "1800k", "-c:a", "libopus"],
+            "mp3" => vec!["-vn", "-c:a", "libmp3lame", "-b:a", "192k"],
+            _ => return Err("不支持的输出格式".into()),
+        };
+        args = vec!["-n".into(), "-i".into(), input_path.clone()];
+        args.extend(codec_args.into_iter().map(String::from));
+        args.extend(["-progress".into(), "pipe:1".into(), "-nostats".into()]);
+    }
+
     if let Some(width) = settings.resolution.width() {
         args.push("-vf".to_string());
         args.push(format!("scale={width}:-2"));
@@ -183,17 +240,14 @@ async fn compress_video(
     let duration = probe_duration(&ffmpeg, &input_path).unwrap_or(0.0);
 
     // Spawn ffmpeg.
-    let mut child = Command::new(&ffmpeg)
+    let mut child = media_command(&ffmpeg)
         .args(&args)
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()
         .map_err(|e| format!("启动 FFmpeg 失败: {e}"))?;
 
-    let stdout = child
-        .stdout
-        .take()
-        .ok_or("无法获取 FFmpeg 输出")?;
+    let stdout = child.stdout.take().ok_or("无法获取 FFmpeg 输出")?;
 
     let app_clone = app.clone();
     let task_id_clone = task_id.clone();
@@ -255,15 +309,372 @@ async fn compress_video(
     })
 }
 
+#[tauri::command]
+async fn convert_video(
+    app: tauri::AppHandle,
+    task_id: String,
+    input_path: String,
+    format: String,
+) -> Result<CompressionResult, String> {
+    if !["mp4", "mov", "mkv", "webm", "mp3"].contains(&format.as_str()) {
+        return Err("不支持的输出格式".into());
+    }
+    let input = PathBuf::from(&input_path);
+    let stem = input.file_stem().ok_or("文件名不正确")?.to_string_lossy();
+    let parent = input.parent().ok_or("文件目录不正确")?;
+    let mut output = parent.join(format!("{stem}_converted.{format}"));
+    let mut counter = 1;
+    while output.exists() {
+        output = parent.join(format!("{stem}_converted_{counter}.{format}"));
+        counter += 1;
+    }
+    compress_video(
+        app,
+        task_id,
+        input_path,
+        output.to_string_lossy().to_string(),
+        CompressionSettings {
+            quality: QualityPreset::High,
+            resolution: ResolutionPreset::Original,
+            format: Some(format),
+        },
+    )
+    .await
+}
+
+fn downloader_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let name = if cfg!(target_os = "windows") {
+        "yt-dlp.exe"
+    } else {
+        "yt-dlp"
+    };
+    let adjacent = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|p| p.join(name)));
+    if let Some(path) = adjacent.filter(|p| p.exists()) {
+        return Ok(path);
+    }
+    if let Ok(dir) = app.path().resource_dir() {
+        let path = dir.join(name);
+        if path.exists() {
+            return Ok(path);
+        }
+    }
+    which::which("yt-dlp").map_err(|_| "下载引擎缺失，请重新安装最新版轻影".into())
+}
+
+fn validate_share_url(url: &str) -> Result<(), String> {
+    let parsed = tauri::Url::parse(url).map_err(|_| "链接格式不正确")?;
+    let hosts = [
+        "youtube.com",
+        "youtu.be",
+        "douyin.com",
+        "iesdouyin.com",
+        "instagram.com",
+        "xiaohongshu.com",
+        "xhslink.com",
+        "kuaishou.com",
+        "gifshow.com",
+        "twitter.com",
+        "x.com",
+        "t.co",
+        "bilibili.com",
+        "b23.tv",
+        "tiktok.com",
+        "vimeo.com",
+        "facebook.com",
+        "fb.watch",
+        "reddit.com",
+        "redd.it",
+        "pinterest.com",
+        "pin.it",
+        "twitch.tv",
+        "dailymotion.com",
+        "dai.ly",
+        "soundcloud.com",
+        "weibo.com",
+        "weibo.cn",
+        "acfun.cn",
+        "ted.com",
+        "tumblr.com",
+        "bandcamp.com",
+        "streamable.com",
+    ];
+    let host = parsed.host_str().unwrap_or("").to_lowercase();
+    if parsed.scheme() != "https"
+        || !parsed.username().is_empty()
+        || parsed.password().is_some()
+        || parsed.port().is_some_and(|port| port != 443)
+        || !hosts
+            .iter()
+            .any(|h| host == *h || host.ends_with(&format!(".{h}")))
+    {
+        return Err("请使用支持平台的公开 HTTPS 链接".into());
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn native_relay_parse(url: String) -> Result<serde_json::Value, String> {
+    validate_share_url(&url)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let client = reqwest::blocking::Client::builder()
+            .timeout(std::time::Duration::from_secs(25))
+            .build()
+            .map_err(|e| e.to_string())?;
+        let response = client
+            .post("https://douyin.laobaitv.net/dl/api/parse")
+            .json(&serde_json::json!({ "url": url }))
+            .send()
+            .map_err(|_| "解析服务连接失败")?
+            .error_for_status()
+            .map_err(|_| "解析服务暂时不可用")?;
+        let data: serde_json::Value = response.json().map_err(|_| "解析返回异常")?;
+        if let Some(error) = data.get("error").and_then(|e| e.as_str()) {
+            return Err(error.to_string());
+        }
+        Ok(data)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn native_media_download(
+    app: tauri::AppHandle,
+    url: String,
+    task_id: String,
+    ext: String,
+) -> Result<String, String> {
+    let parsed = tauri::Url::parse(&url).map_err(|_| "媒体地址不正确")?;
+    let domains = [
+        "zjcdn.com",
+        "douyinvod.com",
+        "bytecdn.cn",
+        "ibytedtos.com",
+        "xhscdn.com",
+        "xhs.cn",
+        "cdninstagram.com",
+        "fbcdn.net",
+        "twimg.com",
+        "ksyuncdn.com",
+        "kwaicdn.com",
+        "kwai.net",
+        "laobaitv.net",
+        "snssdk.com",
+        "bytedance.com",
+    ];
+    let host = parsed.host_str().unwrap_or("");
+    if parsed.scheme() != "https"
+        || !domains
+            .iter()
+            .any(|h| host == *h || host.ends_with(&format!(".{h}")))
+        || !task_id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-')
+        || !["mp4", "jpg", "jpeg", "png", "webp", "webm", "m4a", "mp3"].contains(&ext.as_str())
+    {
+        return Err("媒体地址或文件格式不支持".into());
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        let directory = app
+            .path()
+            .download_dir()
+            .map_err(|e| e.to_string())?
+            .join("轻影");
+        std::fs::create_dir_all(&directory).map_err(|e| e.to_string())?;
+        let partial = directory.join(format!("{task_id}.part"));
+        let client = reqwest::blocking::Client::builder()
+            .timeout(std::time::Duration::from_secs(300))
+            .build()
+            .map_err(|e| e.to_string())?;
+        let mut response = client
+            .get(url)
+            .send()
+            .map_err(|_| "无法连接视频资源")?
+            .error_for_status()
+            .map_err(|_| "媒体链接已失效，请重新解析")?;
+        let content_type = response
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or("");
+        let actual_ext = match content_type.split(';').next().unwrap_or("") {
+            "image/webp" => "webp",
+            "image/png" => "png",
+            "image/jpeg" => "jpg",
+            _ => &ext,
+        };
+        let path = directory.join(format!("{task_id}.{actual_ext}"));
+        let total = response.content_length().unwrap_or(0);
+        let mut file = std::fs::File::create(&partial).map_err(|e| e.to_string())?;
+        let mut buffer = [0; 65536];
+        let mut downloaded = 0_u64;
+        let result = (|| -> Result<(), String> {
+            loop {
+                let count = response.read(&mut buffer).map_err(|e| e.to_string())?;
+                if count == 0 {
+                    break;
+                }
+                file.write_all(&buffer[..count])
+                    .map_err(|e| e.to_string())?;
+                downloaded += count as u64;
+                if total > 0 {
+                    let _ = app.emit(
+                        "download-progress",
+                        ProgressPayload {
+                            task_id: task_id.clone(),
+                            progress: ((downloaded as f64 / total as f64) * 100.0).min(99.0) as u8,
+                        },
+                    );
+                }
+            }
+            if downloaded == 0 {
+                return Err("下载文件为空".into());
+            }
+            Ok(())
+        })();
+        drop(file);
+        if let Err(error) = result {
+            let _ = std::fs::remove_file(&partial);
+            return Err(error);
+        }
+        std::fs::rename(partial, &path).map_err(|e| e.to_string())?;
+        Ok(path.to_string_lossy().to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn native_extract(app: tauri::AppHandle, url: String) -> Result<serde_json::Value, String> {
+    validate_share_url(&url)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let output = media_command(downloader_path(&app)?)
+            .args([
+                "--dump-single-json",
+                "--skip-download",
+                "--no-playlist",
+                "--no-warnings",
+                "--socket-timeout",
+                "12",
+                "--retries",
+                "1",
+                "--extractor-retries",
+                "1",
+                "--",
+                &url,
+            ])
+            .output()
+            .map_err(|e| format!("启动下载引擎失败：{e}"))?;
+        if !output.status.success() {
+            return Err("平台暂时拒绝访问，请使用公开作品链接重试".into());
+        }
+        serde_json::from_slice(&output.stdout).map_err(|_| "下载引擎返回异常".into())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn native_download(
+    app: tauri::AppHandle,
+    url: String,
+    task_id: String,
+) -> Result<String, String> {
+    validate_share_url(&url)?;
+    if !task_id
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '-')
+    {
+        return Err("任务编号不正确".into());
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        let directory = app
+            .path()
+            .download_dir()
+            .map_err(|e| e.to_string())?
+            .join("轻影");
+        std::fs::create_dir_all(&directory).map_err(|e| e.to_string())?;
+        let ffmpeg = resolve_ffmpeg_path(&app)?;
+        let template = directory
+            .join(format!("{task_id}-%(title).80B.%(ext)s"))
+            .to_string_lossy()
+            .to_string();
+        let mut child = media_command(downloader_path(&app)?)
+            .args([
+                "--no-playlist",
+                "--no-warnings",
+                "--no-overwrites",
+                "--no-simulate",
+                "--newline",
+                "--socket-timeout",
+                "15",
+                "--retries",
+                "1",
+                "--extractor-retries",
+                "1",
+                "--ffmpeg-location",
+                &ffmpeg.to_string_lossy(),
+                "-f",
+                "bv*[height<=1080]+ba/b[height<=1080]/b/ba",
+                "--merge-output-format",
+                "mp4",
+                "--progress-template",
+                "download:LIGHTVID_PROGRESS:%(progress._percent_str)s",
+                "--print",
+                "after_move:LIGHTVID_FILE:%(filepath)s",
+                "-o",
+                &template,
+                "--",
+                &url,
+            ])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .map_err(|e| format!("启动下载失败：{e}"))?;
+        let stdout = child.stdout.take().ok_or("无法读取下载进度")?;
+        let mut path = None;
+        for line in BufReader::new(stdout).lines().map_while(Result::ok) {
+            if let Some(value) = line.strip_prefix("LIGHTVID_PROGRESS:") {
+                if let Ok(value) = value.trim().trim_end_matches('%').parse::<f64>() {
+                    let _ = app.emit(
+                        "download-progress",
+                        ProgressPayload {
+                            task_id: task_id.clone(),
+                            progress: value.min(99.0) as u8,
+                        },
+                    );
+                }
+            }
+            if let Some(value) = line.strip_prefix("LIGHTVID_FILE:") {
+                path = Some(value.to_string());
+            }
+        }
+        let status = child.wait().map_err(|e| e.to_string())?;
+        if !status.success() {
+            return Err("下载失败，可能受到平台登录或访问限制，请换一条公开链接重试".into());
+        }
+        let path = path.ok_or("未生成下载文件")?;
+        let _ = app.emit(
+            "download-progress",
+            ProgressPayload {
+                task_id,
+                progress: 100,
+            },
+        );
+        Ok(path)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// Probe the duration of a video file in seconds using ffmpeg.
 ///
 /// Runs `ffmpeg -i input` (with no output) and parses the
 /// `Duration: HH:MM:SS.xx` line from stderr.
 fn probe_duration(ffmpeg: &PathBuf, input: &str) -> Option<f64> {
-    let output = Command::new(ffmpeg)
-        .args(["-i", input])
-        .output()
-        .ok()?;
+    let output = media_command(ffmpeg).args(["-i", input]).output().ok()?;
 
     // ffmpeg prints file info to stderr even on "error" (no output specified).
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -313,11 +724,51 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
-        .invoke_handler(tauri::generate_handler![compress_video, reveal_in_finder])
+        .invoke_handler(tauri::generate_handler![
+            compress_video,
+            convert_video,
+            native_extract,
+            native_download,
+            native_relay_parse,
+            native_media_download,
+            reveal_in_finder
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
 
 fn main() {
     run();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_share_url;
+
+    #[test]
+    fn accepts_public_supported_sites() {
+        for url in [
+            "https://youtu.be/video",
+            "https://www.instagram.com/reel/123",
+            "https://www.bilibili.com/video/BV1",
+            "https://www.ted.com/talks/test",
+            "https://v.douyin.com/test/",
+        ] {
+            assert!(validate_share_url(url).is_ok());
+        }
+    }
+
+    #[test]
+    fn rejects_private_and_lookalike_urls() {
+        for url in [
+            "https://localhost/file",
+            "https://127.0.0.1/file",
+            "https://youtube.com.attacker.example/file",
+            "http://youtube.com/file",
+            "https://youtube.com:8000/file",
+            "https://user:password@youtube.com/file",
+        ] {
+            assert!(validate_share_url(url).is_err());
+        }
+    }
 }

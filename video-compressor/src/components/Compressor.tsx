@@ -1,10 +1,9 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Play,
   Shield,
   Sparkles,
   CheckCircle2,
-  Loader2,
   Download,
   FolderOpen,
   Copy,
@@ -41,6 +40,19 @@ export default function Compressor() {
   const [results, setResults] = useState<FileState[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
   const inputMapRef = useRef<Map<string, CompressInput>>(new Map())
+  const objectUrlsRef = useRef<string[]>([])
+  const processingRef = useRef(false)
+  useEffect(() => () => objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url)), [])
+
+  const addInputs = useCallback((inputs: CompressInput[]) => {
+    const items: FileState[] = inputs.map((input) => {
+      const id = crypto.randomUUID()
+      inputMapRef.current.set(id, input)
+      return { id, path: typeof input.file === 'string' ? input.file : '', name: input.name,
+        originalSize: input.size, compressedSize: 0, outputPath: '', status: 'pending', progress: 0, input }
+    })
+    setResults((old) => [...old, ...items])
+  }, [])
 
   const handlePickFiles = useCallback(async () => {
     const inputs = await pickVideoFiles()
@@ -79,7 +91,8 @@ export default function Compressor() {
   )
 
   const startCompression = useCallback(async () => {
-    if (isProcessing) return
+    if (processingRef.current) return
+    processingRef.current = true
     setIsProcessing(true)
 
     const pending = results.filter((r) => r.status === 'pending')
@@ -105,6 +118,7 @@ export default function Compressor() {
           settings,
           (progress) => updateResult(item.id, { progress }),
         )
+        if (result.output.startsWith('blob:')) objectUrlsRef.current.push(result.output)
 
         updateResult(item.id, {
           status: 'done',
@@ -122,7 +136,8 @@ export default function Compressor() {
     }
 
     setIsProcessing(false)
-  }, [isProcessing, results, settings, updateResult])
+    processingRef.current = false
+  }, [results, settings, updateResult])
 
   const hasPending = results.some((r) => r.status === 'pending')
   const totalOriginal = results.reduce((s, r) => s + r.originalSize, 0)
@@ -144,6 +159,13 @@ export default function Compressor() {
         {/* Upload zone */}
         <div
           onClick={handlePickFiles}
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={(event) => {
+            event.preventDefault()
+            if (!isTauri() && !isProcessing) addInputs(Array.from(event.dataTransfer.files)
+              .filter((file) => file.type.startsWith('video/') || /\.(mp4|mov|mkv|avi|webm)$/i.test(file.name))
+              .map((file) => ({ file, name: file.name, size: file.size })))
+          }}
           className="group cursor-pointer rounded-3xl border-2 border-dashed border-gray-200 bg-white hover:border-blue-400 hover:bg-gradient-to-b hover:from-blue-50/50 hover:to-indigo-50/30 p-10 text-center transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/5 mb-6"
         >
           <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-4 shadow-lg shadow-blue-500/30 group-hover:scale-105 transition-transform">
@@ -192,7 +214,7 @@ export default function Compressor() {
               >
                 {isProcessing ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="signal-bars"><i /><i /><i /></span>
                     压缩中…
                   </>
                 ) : (
@@ -211,11 +233,13 @@ export default function Compressor() {
                   key={r.id}
                   result={r}
                   onRemove={handleRemove}
+                  disabled={isProcessing}
                 />
               ))}
             </div>
           </>
         )}
+        {results.length === 0 && <div className="studio-panel empty-jobs"><FileIconPlaceholder /><p>文件与记录</p><span>添加视频，完成后即可保存压缩结果。</span></div>}
       </div>
     </div>
   )
@@ -230,9 +254,11 @@ function deriveOutputPathWeb(inputPath: string): string {
 function FileRow({
   result,
   onRemove,
+  disabled,
 }: {
   result: FileState
   onRemove: (id: string) => void
+  disabled: boolean
 }) {
   const { name, originalSize, compressedSize, outputPath, status, progress, error } = result
 
@@ -300,6 +326,7 @@ function FileRow({
             </div>
             <button
               type="button"
+              disabled={disabled}
               onClick={() => onRemove(result.id)}
               className="p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 flex-shrink-0"
             >
@@ -316,7 +343,7 @@ function FileRow({
               <div>
                 <div className="flex items-center justify-between text-xs mb-1.5">
                   <span className="text-blue-600 flex items-center gap-1.5">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span className="signal-bars"><i /><i /><i /></span>
                     压缩中…
                   </span>
                   <span className="text-gray-500 tabular-nums font-medium">{progress}%</span>
@@ -390,3 +417,5 @@ function FileRow({
     </div>
   )
 }
+
+function FileIconPlaceholder() { return <Play size={28} /> }

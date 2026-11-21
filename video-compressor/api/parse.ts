@@ -1,7 +1,7 @@
 /** 解析需请求外部平台，放宽函数执行时长。 */
 export const config = { maxDuration: 30 }
 
-type Platform = 'douyin' | 'xiaohongshu' | 'instagram' | 'twitter'
+type Platform = 'douyin' | 'xiaohongshu' | 'instagram' | 'twitter' | 'kuaishou'
 
 interface MediaImage {
   url: string
@@ -48,12 +48,14 @@ const PLATFORM_HOSTS: { platform: Platform; hosts: string[] }[] = [
   { platform: 'xiaohongshu', hosts: ['xiaohongshu.com', 'xhslink.com'] },
   { platform: 'instagram', hosts: ['instagram.com', 'instagr.am', 'ig.me'] },
   { platform: 'twitter', hosts: ['twitter.com', 'x.com', 't.co'] },
+  { platform: 'kuaishou', hosts: ['kuaishou.com', 'gifshow.com'] },
 ]
 const PLATFORM_NAMES: Record<Platform, string> = {
   douyin: '抖音',
   xiaohongshu: '小红书',
   instagram: 'Instagram',
   twitter: 'X',
+  kuaishou: '快手',
 }
 
 function firstUrl(text: string): string {
@@ -82,6 +84,7 @@ async function relayParse(url: string, platform: Platform): Promise<ParseResult>
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'User-Agent': UA },
       body: JSON.stringify({ url }),
+      signal: AbortSignal.timeout(22000),
     })
   } catch {
     throw new Error('解析服务连接失败，请稍后重试')
@@ -108,7 +111,7 @@ async function relayParse(url: string, platform: Platform): Promise<ParseResult>
   }
 
   const images = (data.images ?? [])
-    .map((item) => item.downloadUrl || item.url)
+    .map((item) => item.url || (item.downloadUrl ? new URL(item.downloadUrl, RELAY_ENDPOINT).href : undefined))
     .filter((item): item is string => Boolean(item))
     .map((item) => ({ url: item }))
 

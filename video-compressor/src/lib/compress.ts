@@ -33,7 +33,7 @@ export async function pickVideoFiles(): Promise<CompressInput[] | null> {
     if (!paths) return null
     // Tauri: we don't know the size until backend reads it.
     return paths.map((p) => {
-      const name = p.split('/').pop() || p
+      const name = p.split(/[\\/]/).pop() || p
       return { file: p, name, size: 0 }
     })
   }
@@ -46,7 +46,7 @@ export async function pickVideoFiles(): Promise<CompressInput[] | null> {
     const input = document.createElement('input')
     input.type = 'file'
     input.multiple = true
-    input.accept = 'video/*'
+    input.accept = 'video/*,.mp4,.mov,.mkv,.webm,.avi,.m4v,.wmv,.flv'
     input.style.cssText =
       'position:absolute;left:-9999px;top:0;width:0;height:0;opacity:0'
     document.body.appendChild(input)
@@ -72,6 +72,10 @@ export async function pickVideoFiles(): Promise<CompressInput[] | null> {
       }))
       cleanup()
       resolve(inputs)
+    }
+    input.oncancel = () => {
+      cleanup()
+      resolve(null)
     }
 
     input.click()

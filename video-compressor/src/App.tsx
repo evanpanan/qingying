@@ -1,26 +1,38 @@
-import { useState } from 'react'
-import Navbar from './components/Navbar'
-import Compressor from './components/Compressor'
-import Home from './pages/Home'
-import Downloader from './pages/Download'
+import { lazy, Suspense, useEffect, useState } from 'react'
+import StudioNav from './components/StudioNav'
+import Landing from './pages/Landing'
 import type { Page } from './types'
-import { isTauri } from './lib/env'
+
+const Converter = lazy(() => import('./pages/Convert'))
+const Compressor = lazy(() => import('./components/Compressor'))
+function currentPage(): Page {
+  const name = window.location.hash.slice(1)
+  return ['home', 'download', 'convert', 'compress'].includes(name) ? name as Page : 'home'
+}
 
 function App() {
-  const [page, setPage] = useState<Page>('home')
-
-  // Desktop app: always show the compressor.
-  if (isTauri()) {
-    return <Compressor />
+  const [page, setPage] = useState<Page>(currentPage)
+  const [visited, setVisited] = useState<Set<Page>>(() => new Set([currentPage()]))
+  useEffect(() => {
+    const handle = () => { const next = currentPage(); setPage(next); setVisited((old) => new Set([...old, next])) }
+    window.addEventListener('hashchange', handle)
+    return () => window.removeEventListener('hashchange', handle)
+  }, [])
+  function navigate(next: Page) {
+    setPage(next)
+    setVisited((old) => new Set([...old, next]))
+    window.location.hash = next
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
-
-  // Web: show navbar + page router.
+  // 保持任务组件挂载，切换工具不打断下载或转换。
   return (
-    <div className="min-h-screen">
-      <Navbar page={page} onNavigate={setPage} />
-      {page === 'home' && <Home onNavigate={setPage} />}
-      {page === 'compress' && <Compressor />}
-      {page === 'download' && <Downloader />}
+    <div className="studio">
+      <StudioNav page={page} onNavigate={navigate} />
+      <div hidden={page !== 'home' && page !== 'download'}><Landing onNavigate={navigate} /></div>
+      <Suspense fallback={<div className="workspace-page"><span className="signal-bars"><i /><i /><i /></span></div>}>
+        {visited.has('convert') && <div hidden={page !== 'convert'}><Converter /></div>}
+        {visited.has('compress') && <div hidden={page !== 'compress'} className="legacy-tool"><div className="page-intro"><span className="eyebrow">03 / COMPRESS</span><h1>更轻一点，<em>分享快一点。</em></h1><p>视频留在本机，原文件保持不变。</p></div><Compressor /></div>}
+      </Suspense>
     </div>
   )
 }

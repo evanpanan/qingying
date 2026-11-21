@@ -1,5 +1,6 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
+import { spawn } from 'node:child_process'
 
 /**
  * 本地开发时挂载 Vercel API 函数（api/*.ts），
@@ -12,7 +13,31 @@ function apiDevServer(): Plugin {
       if (!req.url || !req.url.startsWith('/api/')) return next()
       const name = req.url.split('?')[0].slice('/api/'.length).replace(/\/+$/, '')
       if (!name) return next()
+      if (!['parse', 'proxy', 'extract'].includes(name)) return next()
       try {
+        if (name === 'extract') {
+          const chunks: Buffer[] = []
+          for await (const chunk of req) chunks.push(Buffer.from(chunk))
+          const child = spawn(process.env.LIGHTVID_PYTHON || 'python3', ['api/extract.py'], { cwd: process.cwd() })
+          let output = ''
+          let finished = false
+          const finish = (data: string) => {
+            if (finished) return
+            finished = true
+            res.setHeader('Content-Type', 'application/json; charset=utf-8')
+            res.end(data)
+          }
+          const timer = setTimeout(() => child.kill(), 55000)
+          child.stdout.on('data', (chunk) => { output += chunk })
+          child.stderr.on('data', () => undefined)
+          child.on('error', () => { clearTimeout(timer); finish(JSON.stringify({ ok: false, error: '本地 Python 下载引擎不可用' })) })
+          child.on('close', () => {
+            clearTimeout(timer)
+            finish(output || JSON.stringify({ ok: false, error: '本地下载引擎未安装，请安装 requirements.txt 依赖' }))
+          })
+          child.stdin.end(Buffer.concat(chunks))
+          return
+        }
         const mod = await server.ssrLoadModule(`/api/${name}.ts`)
         const handler = mod?.default
         if (typeof handler !== 'function') return next()

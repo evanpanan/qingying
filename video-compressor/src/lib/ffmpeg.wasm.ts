@@ -2,6 +2,7 @@ import { FFmpeg } from '@ffmpeg/ffmpeg'
 import { fetchFile, toBlobURL } from '@ffmpeg/util'
 import type { CompressionSettings } from '../types'
 import { QUALITY_OPTIONS, RESOLUTION_OPTIONS } from './constants'
+import { FORMATS, type OutputFormat } from './media'
 
 // FFmpeg core CDN (single-threaded version, no COOP/COEP needed)
 const FFMPEG_CORE_VERSION = '0.12.6'
@@ -9,6 +10,7 @@ const FFMPEG_CORE_URL = `https://unpkg.com/@ffmpeg/core@${FFMPEG_CORE_VERSION}/d
 
 let ffmpegInstance: FFmpeg | null = null
 let isLoading = false
+let jobQueue: Promise<unknown> = Promise.resolve()
 
 /**
  * Lazily load the FFmpeg.wasm instance.
@@ -70,19 +72,7 @@ export async function compressVideoWasm(
   settings: CompressionSettings,
   onProgress: (progress: number) => void,
 ): Promise<{ blob: Blob; originalSize: number; compressedSize: number }> {
-  const ffmpeg = await getFfmpeg()
-
-  const inputName = 'input.mp4'
-  const outputName = 'output.mp4'
-
-  // Write input file to FFmpeg's virtual FS.
-  await ffmpeg.writeFile(inputName, await fetchFile(file))
-
-  // Build ffmpeg args.
   const args: string[] = [
-    '-y',
-    '-i',
-    inputName,
     '-c:v',
     'libx264',
     '-preset',
@@ -102,18 +92,30 @@ export async function compressVideoWasm(
     args.push('-vf', scale)
   }
 
-  args.push(outputName)
+  const blob = await runWasmJob(file, 'mp4', args, onProgress)
+  return { blob, originalSize: file.size, compressedSize: blob.size }
+}
 
-  // Track progress via the 'log' or 'progress' events.
-  // FFmpeg.wasm emits 'log' events; we parse time= to estimate progress.
-  // For simplicity we use a coarse progress based on execution phases.
-  let onLog: (({ message }: { message: string }) => void) | null = null
+export function convertVideoWasm(file: File, format: OutputFormat, onProgress: (value: number) => void) {
+  const option = FORMATS.find((item) => item.id === format)!
+  return runWasmJob(file, format, option.args, onProgress)
+}
 
-  // We'll parse the Duration from the first log lines to compute progress.
+function runWasmJob(file: File, format: OutputFormat, args: string[], onProgress: (value: number) => void): Promise<Blob> {
+  // 一个引擎只执行一个任务，防止切换工具后同时覆盖虚拟文件。
+  const job = jobQueue.then(() => executeJob(file, format, args, onProgress))
+  jobQueue = job.catch(() => undefined)
+  return job
+}
+
+async function executeJob(file: File, format: OutputFormat, args: string[], onProgress: (value: number) => void) {
+  if (file.size > 500 * 1024 * 1024) throw new Error('超过 500 MB 的文件请使用桌面版处理')
+  onProgress(0)
+  const ffmpeg = await getFfmpeg()
+  const inputName = `input.${file.name.split('.').pop()?.replace(/[^a-z0-9]/gi, '') || 'mp4'}`
+  const outputName = `output.${format}`
   let durationSec = 0
-
-  onLog = ({ message }: { message: string }) => {
-    // Parse Duration: HH:MM:SS.xx
+  const onLog = ({ message }: { message: string }) => {
     const durMatch = message.match(/Duration:\s*(\d+):(\d+):(\d+\.?\d*)/)
     if (durMatch) {
       const h = parseInt(durMatch[1], 10)
@@ -123,7 +125,6 @@ export async function compressVideoWasm(
       return
     }
 
-    // Parse out_time_ms or time=HH:MM:SS.xx
     if (durationSec > 0) {
       const timeMatch = message.match(/time=(\d+):(\d+):(\d+\.?\d*)/)
       if (timeMatch) {
@@ -138,40 +139,19 @@ export async function compressVideoWasm(
   }
 
   ffmpeg.on('log', onLog)
-
   try {
-    await ffmpeg.exec(args)
+    await ffmpeg.writeFile(inputName, await fetchFile(file))
+    const code = await ffmpeg.exec(['-y', '-i', inputName, ...args, outputName])
+    if (code !== 0) throw new Error('转换失败，请检查源文件是否可播放，提取音频时请确认文件含音轨')
+    const data = await ffmpeg.readFile(outputName)
+    if (!(data instanceof Uint8Array) || !data.byteLength) throw new Error('输出文件为空')
+    const buffer = new ArrayBuffer(data.byteLength)
+    new Uint8Array(buffer).set(data)
+    const blob = new Blob([buffer], { type: FORMATS.find((item) => item.id === format)!.mime })
     onProgress(100)
+    return blob
   } finally {
-    if (onLog) {
-      // @ffmpeg/ffmpeg doesn't expose off in 0.12 easily; we just null it out.
-      // The instance is reused, so we must remove the listener.
-      try {
-        ffmpeg.off('log', onLog)
-      } catch {
-        // ignore
-      }
-    }
-  }
-
-  // Read the output file.
-  const data = (await ffmpeg.readFile(outputName)) as Uint8Array
-  // Copy to a fresh ArrayBuffer to avoid SharedArrayBuffer type issues.
-  const buffer = new ArrayBuffer(data.byteLength)
-  new Uint8Array(buffer).set(data)
-  const blob = new Blob([buffer], { type: 'video/mp4' })
-
-  // Clean up virtual FS.
-  try {
-    await ffmpeg.deleteFile(inputName)
-    await ffmpeg.deleteFile(outputName)
-  } catch {
-    // ignore
-  }
-
-  return {
-    blob,
-    originalSize: file.size,
-    compressedSize: blob.size,
+    ffmpeg.off('log', onLog)
+    await Promise.all([ffmpeg.deleteFile(inputName).catch(() => undefined), ffmpeg.deleteFile(outputName).catch(() => undefined)])
   }
 }
