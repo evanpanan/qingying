@@ -1,4 +1,4 @@
-import { Play, Download, Sparkles, Link } from 'lucide-react'
+import { Download, Sparkles, Link } from 'lucide-react'
 import type { Page } from '../types'
 
 interface NavbarProps {
@@ -16,8 +16,8 @@ export default function Navbar({ page, onNavigate }: NavbarProps) {
           onClick={() => onNavigate('home')}
           className="flex items-center gap-2.5"
         >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/20">
-            <Play className="w-5 h-5 text-white" />
+          <div className="w-9 h-9 flex items-center justify-center">
+            <svg viewBox="0 0 48 48" width="36" height="36" aria-hidden="true"><use href="/lightvid.svg?v=2#brand-mark" /></svg>
           </div>
           <div className="text-left">
             <div className="font-bold text-gray-900 leading-tight">轻影</div>

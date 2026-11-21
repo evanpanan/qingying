@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "test:extract": "python3 -m unittest discover -s tests -p 'test_*.py'",
+    "icons:generate": "node scripts/generate-brand-icons.mjs",
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",

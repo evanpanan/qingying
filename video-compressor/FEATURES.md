@@ -8,6 +8,10 @@
 
 ## 界面与动效
 
+- Logo 统一使用 `public/lightvid.svg` 中的朱红播放标志；`npm run icons:generate`
+  同步网站 favicon、Apple Touch、主屏幕图标、Safari 固定标签与原生打包素材。
+- 页面声明 Apple Touch 图标、安装清单和版本化图标地址；旧的 Safari 程序坞快捷方式
+  可能需要在新版部署后重新添加。原生图标素材更新不等于旧 DMG 已重新打包。
 - 纸白、墨色、朱红与鼠尾草色光影；导航使用滑动选中背景，输入框使用柔和焦点反馈。
 - `ExperienceGallery` 的三组插画同时循环播放，并自动轮换选中卡片。
   鼠标悬停临时接管选择，离开后继续轮换；暂停按钮控制全部演示。

@@ -63,12 +63,12 @@ a { text-decoration: none; color: inherit; }
 .logo-icon {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: 50%;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+  box-shadow: 0 4px 12px rgba(213,75,56,0.15);
 }
 .logo-text {
   font-size: 18px;

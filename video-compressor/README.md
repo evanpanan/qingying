@@ -63,6 +63,25 @@ LIGHTVID_PYTHON=/path/to/python3 npm run dev
 `npm run preview` 仅预览静态构建，不挂载本地解析函数，
 不能替代完整的下载功能开发服务器。
 
+## Logo 与网站图标
+
+`public/lightvid.svg` 是唯一 Logo 源文件，导航直接引用其中的 `brand-mark`。
+更改 Logo 后运行：
+
+```bash
+npm run icons:generate
+```
+
+该命令同步生成默认 favicon、各尺寸 PNG/ICO、Apple Touch 图标、
+Safari 固定标签图标、主屏幕图标，以及 Tauri 的 ICNS/ICO 和各平台打包资源。
+`site.webmanifest` 声明应用名称与安装图标；页面显式引用
+`apple-touch-icon-v2.png`，避免继续选择旧图标缓存。
+后续更换品牌时应同步更新图标版本路径或查询参数。
+
+Safari 已添加到程序坞的 Web App 会保存自己的图标，网站更新不保证自动替换；
+确认新版已部署后，可移除旧快捷方式，再从 Safari 重新添加。
+图标生成不会改写已发布的原生 DMG，需要重新打包才能更新安装包内的图标。
+
 ## 桌面引擎
 
 `src-tauri/binaries/` 被 Git 忽略，干净克隆后需要创建目录并准备两个引擎。
