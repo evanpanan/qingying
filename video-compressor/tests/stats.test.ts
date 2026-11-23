@@ -64,20 +64,7 @@ test('数据库断连返回 503，不生成虚假数字，不暴露连接信息'
   assert(!('data' in result.data))
   assert(!JSON.stringify(result.data).includes('secret'))
   assert(!JSON.stringify(result.headers).includes('secret'))
-  assert.equal(result.headers['X-Lightvid-Stats-Diagnostic'], 'UNKNOWN')
-})
-
-test('临时统计诊断只公开允许的错误码，不泄漏连接串或任意错误文本', async () => {
-  for (const code of ['SELF_SIGNED_CERT_IN_CHAIN', '28P01', '42P01', 'ENOTFOUND', 'private-secret\r\n']) {
-    const handler = createStatsHandler(() => {
-      throw Object.assign(new Error('postgresql://private:secret@database.example/db'), { code })
-    })
-    const result = response()
-    await handler({ method: 'GET', headers: {} }, result)
-    assert.equal(result.code, 503)
-    assert.equal(result.headers['X-Lightvid-Stats-Diagnostic'], code.includes('secret') ? 'UNKNOWN' : code)
-    assert(!JSON.stringify(result).includes('secret'))
-  }
+  assert.equal(result.headers['X-Lightvid-Stats-Diagnostic'], undefined)
 })
 
 test('远端 PostgreSQL 强制校验证书，本机测试连接例外', () => {
@@ -99,6 +86,20 @@ test('Supabase 使用官方 CA 且保留证书验证，不扩展其他主机的�
   }
   for (const host of ['db.example', 'evil-pooler.supabase.com', 'aws-1-us-east-1.pooler.supabase.com.evil.example', 'supabase.co.evil.example']) {
     assert.deepEqual(statsPoolConfig(`postgresql://test:example@${host}/postgres`).ssl, { rejectUnauthorized: true })
+  }
+})
+
+test('显式 CA 配置优先于内置证书，仍保留远端证书验证', () => {
+  const previous = process.env.LIGHTVID_STATS_CA
+  const custom = `${SUPABASE_CA}\n`
+  try {
+    process.env.LIGHTVID_STATS_CA = custom
+    for (const host of ['aws-1-us-east-1.pooler.supabase.com', 'db.example']) {
+      assert.deepEqual(statsPoolConfig(`postgresql://test:example@${host}/postgres`).ssl, { rejectUnauthorized: true, ca: custom })
+    }
+  } finally {
+    if (previous === undefined) delete process.env.LIGHTVID_STATS_CA
+    else process.env.LIGHTVID_STATS_CA = previous
   }
 })
 
