@@ -37,3 +37,11 @@ test('粒子页脚保留可访问触发方式与生命周期清理', () => {
     assert(animation.includes(requirement), requirement)
   }
 })
+
+test('粒子字标保持原版页脚比例并归位品牌区', () => {
+  assert.match(text('src/pages/Landing.tsx'), /className="footer-brand".*<ParticleWordmark \/>/)
+  assert.match(text('src/studio-polish.css'), /width: min\(100%, 480px\); height: clamp\(66px, 9vw, 125px\)/)
+  assert.match(text('src/studio-polish.css'), /width: min\(100%, 400px\); height: clamp\(58px, 16\.2vw, 106px\)/)
+  assert.match(text('src/lib/particle-wordmark.ts'), /height = nextHeight/)
+  assert.doesNotMatch(text('src/lib/particle-wordmark.ts'), /Math\.min\(270/)
+})

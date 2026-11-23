@@ -9,9 +9,8 @@ export default function ParticleWordmark() {
       return mountParticleWordmark(boxRef.current, canvasRef.current)
     }
   }, [])
-  return <div className="particle-wordmark" ref={boxRef} role="button" tabIndex={0} aria-label="LIGHTVID 粒子文字，点击或按回车散开后重新聚合">
+  return <div className="particle-wordmark" ref={boxRef} role="button" tabIndex={0} aria-label="LIGHTVID 粒子文字，点击或按回车散开后重新聚合" title="划过，让它流动；轻触，散开再相聚">
     <span className="particle-wordmark-fallback" aria-hidden="true">LIGHTVID</span>
     <canvas ref={canvasRef} aria-hidden="true" />
-    <span className="particle-wordmark-hint" aria-hidden="true">划过，让它流动 · 轻触，散开再相聚</span>
   </div>
 }

@@ -64,12 +64,14 @@ export function mountParticleWordmark(box: HTMLElement, canvas: HTMLCanvasElemen
   }
   const step = (now: number) => {
     frame = 0
-    if (!visible || document.hidden || motion.matches || disposed) return
+    if (disposed) return
+    if (motion.matches) { preference(); return }
+    if (!visible || document.hidden) { stop(); return }
     const dt = Math.min(2, (now - (last || now - 16.67)) / 16.67)
     last = now
     elapsed += dt * 16.67
     if (elapsed > 3800) { elapsed = 0; word = (word + 1) % WORDS.length; aim() }
-    const radius = Math.max(55, gap * 14), radiusSquared = radius * radius
+    const radius = Math.max(25, gap * 12), radiusSquared = radius * radius
     for (const dot of dots) {
       dot.vx += (dot.tx - dot.x) * .045 * dt
       dot.vy += (dot.ty - dot.y) * .045 * dt
@@ -96,14 +98,14 @@ export function mountParticleWordmark(box: HTMLElement, canvas: HTMLCanvasElemen
   }
   const layout = () => {
     const nextWidth = Math.round(box.clientWidth)
-    if (!nextWidth || nextWidth === width || disposed) return
+    const nextHeight = Math.round(box.clientHeight)
+    if (!nextWidth || !nextHeight || (nextWidth === width && nextHeight === height) || disposed) return
     width = nextWidth
-    height = Math.round(Math.min(270, Math.max(85, width * .21)))
-    gap = width < 600 ? 4 : 6
+    height = nextHeight
+    gap = Math.max(2, Math.min(4, height / 30))
     const dpr = Math.min(2, devicePixelRatio || 1)
     canvas.width = Math.round(width * dpr)
     canvas.height = Math.round(height * dpr)
-    canvas.style.height = `${height}px`
     context.setTransform(dpr, 0, 0, dpr, 0, 0)
     targets = WORDS.map((value) => sample(value, width, height, gap))
     const count = Math.max(...targets.map((points) => points.length))
