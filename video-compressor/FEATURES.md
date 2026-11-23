@@ -1,4 +1,4 @@
-# LightVid 1.1
+# LightVid 1.2
 
 ## 产品结构
 
@@ -21,35 +21,41 @@
 - 演示中的文件与大小数字不是实际处理任务，界面明确标注为互动演示。
 - 页脚展示作者 Cooper，跳转 <https://x.com/Yep_Cooper>。真实头像缓存于
   `public/cooper-avatar.jpg`，来源为该主页公开的头像（2026-11-21）。
+- 页脚 LIGHTVID 使用 Dissolve 同款粒子文字：自动变换、指针避让、点击散开再聚合。
+  支持触控、键盘、动态减少动画偏好；离屏和隐藏标签暂停，卸载时清理帧与观察器。
 - 本轮浏览器验证覆盖自动播放、悬停后恢复、暂停/继续、键盘焦点、搜索过滤、
   作者跳转、减少动态效果及 320/375/390/768/1024px 的三工具页面。
 
 ## 下载
 
-接入 YouTube、抖音、Instagram、小红书、快手、X、Bilibili、TikTok、
-Vimeo、Facebook、Reddit、Pinterest、Twitch、Dailymotion、SoundCloud、
-微博、AcFun、TED、Tumblr、Bandcamp、Streamable。
+轻影直接运行 yt-dlp 全量解析器与 Generic 网页探测。
+2026.10.26 引擎包含 1,753 个非 Generic 解析器，运行时接口返回当前版本及数量。
+数量不是独立网站数或下载成功保证；不将固定“1800”用作产品承诺。
+首页常用平台目录扩充为示例列表，不再限制列表以外的公开网站。
 
-这些是已接入解析器的平台，不代表每个作品都能下载。仅处理公开、单个作品；
+不调用第三方解析网站、laobaitv 或 fxtwitter。仅处理公开、单个作品；
 登录、地区、平台风控与 DRM 可能阻止解析。没有实现付费权限或 DRM 绕过。
 
 在线版：
 
-- 国内平台及 Instagram/X 使用现有公开中转。
-- 其他平台由 Vercel Python Function `api/extract.py` 与 yt-dlp 解析。
-- 只展示可直接保存的完整音视频文件或明确标注的独立音频文件。
+- 所有平台由轻影自己的 Vercel Python Function `api/extract.py` 与 yt-dlp 解析。
+- 在线与桌面共同使用 `lightvid_engine.py` 的受限网络传输。
+- 网络请求限制为公开 HTTP(S)，仅使用 IPv4 DNS，检查全部返回地址并固定到校验后的 IP，
+  包括提取器子请求与重定向；不回退到其他传输、系统代理、文件或 FTP。
+- 初始链接仅支持 HTTPS；在线解析设置请求数量与时长预算。
+- 展示完整音视频、独立音频，或标为“原文件”的未提供音轨元数据的直链。
 - 不把无声的高清视频伪装成完整视频。需要合并音视频时使用桌面版。
-- 媒体代理保留 URL 签名，检查公开资源地址及每一跳重定向，支持 Range。
+- 自有媒体代理保留 URL 签名，逐跳检查重定向并固定 DNS 地址，支持 Range。
 - 在线下载和转换限制 500 MB，避免浏览器内存耗尽。
 
 桌面版：
 
-- 包含 yt-dlp 独立可执行文件，用户不需要安装 Python。
+- 包含自有 yt-dlp 独立可执行文件、Python 运行时与 Node.js，用户无需另行安装。
 - yt-dlp 选择最高 1080p 音视频并使用内置 FFmpeg 合并。
-- 原中转平台直接下载原文件，保存至系统下载目录下的 `轻影` 文件夹。
+- 所有下载都使用本机引擎，保存至系统下载目录下的 `轻影` 文件夹。
 - 下载引擎版本 2026.10.26；平台签名变化时需要更新引擎。
-- 某些 YouTube 挑战需要 JavaScript runtime，已安装的 Node/Deno 可被引擎使用；
-  目前安装包未内置该额外 runtime，相关作品仍可能受限。
+- 显式使用内置 Node.js 执行支持的 JavaScript 挑战，并忽略外部 yt-dlp 配置。
+- macOS 1.2.0 同步新版 Logo、粒子页脚和自有引擎；仍为临时签名，未 Apple 公证。
 
 ## 转换
 
@@ -84,11 +90,15 @@ macOS 引擎可按以下命令重新打包：
 
 ```sh
 python3 -m pip install -r requirements.txt pyinstaller
-python3 -m PyInstaller --onefile --collect-all yt_dlp --collect-all yt_dlp_ejs \
+python3 -m PyInstaller --onefile --paths . --collect-all yt_dlp --collect-all yt_dlp_ejs \
   --name yt-dlp-aarch64-apple-darwin --distpath src-tauri/binaries \
   --workpath /tmp/lightvid-engine-build --specpath /tmp scripts/ytdlp_entry.py
+cp /tmp/node-v25.8.0-darwin-arm64/bin/node src-tauri/binaries/node-aarch64-apple-darwin
 npm run tauri:build -- --bundles app
 ```
+
+先下载、校验并解压 Node.js 官方独立发行版，不复制依赖本机动态库的 Homebrew Node。
+在线媒体透传最长约 280 秒，极慢源或大文件建议使用桌面版本。
 
 Windows 安装包由仓库根目录 `.github/workflows/desktop-windows.yml` 构建，
 作为 GitHub Actions artifact 输出；未验证成功前不在官网宣称已发布。
@@ -103,6 +113,7 @@ LibreGet 提供了使用 yt-dlp 的架构参考，没有复制其 GPL-3.0 应用
 - FFmpeg: <https://ffmpeg.org>。包含 libx264 的桌面引擎适用 GPL；
   对外分发需按对应许可证提供源代码与构建信息。
 - FFmpeg.wasm: <https://github.com/ffmpegwasm/ffmpeg.wasm>。
-- 中转服务: <https://douyin.laobaitv.net>，无可用性或长期稳定性保证。
+- Node.js: <https://nodejs.org>，完整声明位于 `NODE_LICENSE` 并随安装包分发。
+- Dissolve 粒子页脚：MIT，来源与许可证位于 `THIRD_PARTY_NOTICES.md`。
 
 macOS 安装包为临时签名，未通过 Apple 公证；官网保留隔离属性处理说明。

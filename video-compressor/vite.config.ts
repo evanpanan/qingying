@@ -1,10 +1,12 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
 import { spawn } from 'node:child_process'
+import { rmSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 /**
  * 本地开发时挂载 Vercel API 函数（api/*.ts），
- * 让 /api/parse、/api/proxy 在 `npm run dev` 下即可用（线上由 Vercel 托管）。
+ * 自有 Python 解析与媒体代理在本地和部署端使用相同实现。
  */
 function apiDevServer(): Plugin {
   const mount = (server: any) => {
@@ -16,15 +18,32 @@ function apiDevServer(): Plugin {
       if (!['parse', 'proxy', 'extract'].includes(name)) return next()
       try {
         if (name === 'extract') {
+          if (!['POST', 'GET'].includes(req.method || '')) {
+            res.statusCode = 405
+            res.end()
+            return
+          }
           const chunks: Buffer[] = []
-          for await (const chunk of req) chunks.push(Buffer.from(chunk))
-          const child = spawn(process.env.LIGHTVID_PYTHON || 'python3', ['api/extract.py'], { cwd: process.cwd() })
+          let size = 0
+          for await (const chunk of req) {
+            size += chunk.length
+            if (size > 16384) {
+              res.statusCode = 413
+              res.end(JSON.stringify({ ok: false, error: '链接内容过长' }))
+              return
+            }
+            chunks.push(Buffer.from(chunk))
+          }
+          const args = ['api/extract.py', ...(req.method === 'GET' ? ['--info'] : [])]
+          const child = spawn(process.env.LIGHTVID_PYTHON || 'python3', args, { cwd: process.cwd() })
           let output = ''
           let finished = false
           const finish = (data: string) => {
             if (finished) return
             finished = true
             res.setHeader('Content-Type', 'application/json; charset=utf-8')
+            res.setHeader('Cache-Control', 'no-store')
+            try { res.statusCode = JSON.parse(data).ok ? 200 : 400 } catch { res.statusCode = 502 }
             res.end(data)
           }
           const timer = setTimeout(() => child.kill(), 55000)
@@ -72,9 +91,21 @@ function apiDevServer(): Plugin {
   }
 }
 
+function desktopAssets(): Plugin {
+  return {
+    name: 'lightvid-desktop-assets',
+    closeBundle() {
+      if (process.env.TAURI_ENV_PLATFORM) {
+        // Website installers must never be embedded recursively in the app.
+        rmSync(resolve('dist/downloads'), { recursive: true, force: true })
+      }
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), apiDevServer()],
+  plugins: [react(), apiDevServer(), desktopAssets()],
   // Tauri expects the dev server on port 1420
   server: {
     port: 1420,

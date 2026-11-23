@@ -1,10 +1,11 @@
-import { Readable } from 'node:stream'
 import { lookup } from 'node:dns/promises'
 import { isIP } from 'node:net'
 import { pipeline } from 'node:stream/promises'
+import { request, type RequestOptions } from 'node:https'
+import type { IncomingMessage } from 'node:http'
 
 /** 媒体透传可能耗时较长（大文件下载）。 */
-export const config = { maxDuration: 60 }
+export const config = { maxDuration: 300 }
 
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36'
@@ -18,7 +19,7 @@ const PASS_HEADERS = [
   'etag',
 ]
 
-async function publicUrl(raw: string): Promise<URL> {
+async function publicUrl(raw: string) {
   const url = new URL(raw)
   if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443')) {
     throw new Error('仅支持公开 HTTPS 媒体地址')
@@ -32,9 +33,24 @@ async function publicUrl(raw: string): Promise<URL> {
     const [a, b] = address.split('.').map(Number)
     return a === 0 || a === 10 || a === 127 || a >= 224 ||
       (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) ||
-      (a === 192 && (b === 168 || b === 0)) || (a === 100 && b >= 64 && b <= 127)
+      (a === 192 && (b === 168 || b === 0 || b === 2)) ||
+      (a === 198 && (b === 18 || b === 19 || b === 51)) ||
+      (a === 203 && b === 0) || (a === 100 && b >= 64 && b <= 127)
   })) throw new Error('不支持此资源地址')
-  return url
+  return { url, address: records[0].address }
+}
+
+function openPublic(target: Awaited<ReturnType<typeof publicUrl>>, headers: Record<string, string>, signal: AbortSignal) {
+  return new Promise<IncomingMessage>((resolve, reject) => {
+    const options: RequestOptions = {
+      headers, signal, agent: false, family: 4,
+      // Preserve hostname/SNI but connect only to the address validated above.
+      lookup: (_host, _options, callback) => callback(null, target.address, 4),
+    }
+    const upstream = request(target.url, options, resolve)
+    upstream.on('error', reject)
+    upstream.end()
+  })
 }
 
 /**
@@ -66,34 +82,37 @@ export default async function handler(req: any, res: any) {
     if (req.headers?.range) headers.Range = String(req.headers.range)
 
     let current = await publicUrl(target)
-    let upstream: Response | undefined
+    let upstream: IncomingMessage | undefined
+    const signal = AbortSignal.timeout(280000)
     for (let hop = 0; hop < 6; hop++) {
-      upstream = await fetch(current, { headers, redirect: 'manual', signal: AbortSignal.timeout(50000) })
-      if (![301, 302, 303, 307, 308].includes(upstream.status)) break
-      const location = upstream.headers.get('location')
-      await upstream.body?.cancel()
+      upstream = await openPublic(current, headers, signal)
+      if (![301, 302, 303, 307, 308].includes(upstream.statusCode || 0)) break
+      const location = upstream.headers.location
+      upstream.destroy()
       if (!location) throw new Error('资源重定向异常')
-      current = await publicUrl(new URL(location, current).href)
+      current = await publicUrl(new URL(location, current.url).href)
       upstream = undefined
     }
     if (!upstream) throw new Error('资源重定向次数过多')
-    if (!upstream.ok && upstream.status !== 206) {
-      res.status(upstream.status).json({
+    const status = upstream.statusCode || 502
+    if (status < 200 || status >= 300) {
+      upstream.destroy()
+      res.status(status).json({
         ok: false,
-        error: `资源获取失败（HTTP ${upstream.status}）`,
+        error: `资源获取失败（HTTP ${status}）`,
       })
       return
     }
 
-    const contentType = upstream.headers.get('content-type') || ''
+    const contentType = upstream.headers['content-type'] || ''
     if (!/^(video\/|audio\/|image\/|application\/octet-stream)/i.test(contentType)) {
-      await upstream.body?.cancel()
+      upstream.destroy()
       res.status(400).json({ ok: false, error: '该地址不是可下载的媒体文件' })
       return
     }
-    res.status(upstream.status)
+    res.status(status)
     for (const key of PASS_HEADERS) {
-      const value = upstream.headers.get(key)
+      const value = upstream.headers[key]
       if (value) res.setHeader(key, value)
     }
     res.setHeader('Cache-Control', 'private, no-store')
@@ -106,11 +125,7 @@ export default async function handler(req: any, res: any) {
       res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(name)}`)
     }
 
-    if (!upstream.body) {
-      res.end()
-      return
-    }
-    await pipeline(Readable.fromWeb(upstream.body as any), res)
+    await pipeline(upstream, res)
   } catch (e: any) {
     if (res.headersSent) res.destroy()
     else res.status(502).json({ ok: false, error: e?.message || '媒体代理请求失败' })

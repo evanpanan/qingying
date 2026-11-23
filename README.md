@@ -6,7 +6,7 @@
 在线版无需安装，桌面版内置媒体引擎，适合高清下载与大文件处理。
 
 [在线使用](https://qingying-rosy.vercel.app) ·
-[macOS 1.1.0 安装包](video-compressor/public/downloads/轻影_1.1.0_aarch64.dmg) ·
+[macOS 1.2.0 安装包](video-compressor/public/downloads/轻影_1.2.0_aarch64.dmg) ·
 [开发指南](video-compressor/README.md) ·
 [详细功能与架构](video-compressor/FEATURES.md) ·
 [作者 Cooper](https://x.com/Yep_Cooper)
@@ -15,25 +15,37 @@
 
 | 功能 | 说明 |
 | --- | --- |
-| 视频下载 | 首页直接粘贴作品链接或分享文案，自动识别平台；接入 21 个常用平台 |
+| 视频下载 | 轻影自运行全量 yt-dlp 解析器与通用网页探测，不设推荐平台白名单 |
 | 格式转换 | MP4、MOV、MKV、WebM、MP3；支持批量转换、提取音频与失败重试 |
 | 视频压缩 | 4 档画质预设与原始、1080p、720p、480p 分辨率选项，支持批量处理 |
 | 本地记录 | 下载记录仅存于当前设备，切换工具时保留正在处理的任务 |
-| 交互界面 | 三组演示自动循环，悬停光影与倾斜、暂停与继续、柔和焦点样式 |
+| 交互界面 | 三组自动演示；页脚粒子文字自动聚散，悬停避让、点击散开再归位 |
 | 手机适配 | 完整展示动效卡片，支持触控和减少动态效果偏好 |
 | 网站图标 | 统一朱红播放 Logo，覆盖标签页、Safari 程序坞与手机主屏幕 |
 
 格式转换与压缩在本机执行，不上传所选源文件。**下载需要联网**：
-作品链接会交给平台解析器或第三方中转，媒体可能经在线代理传输。
+在线版由轻影部署的 Python 引擎直接访问作品平台与媒体资源；
+桌面版在本机解析。**不再调用第三方解析网站或中转解析 API**。
+在线媒体下载可能经轻影自己的代理传输。
 转换与压缩会重新编码，不能保证无损或固定的体积缩减比例。
 
-## 接入平台
+## 下载范围
+
+开放当前 yt-dlp 引擎的全量解析器，并使用 Generic 探测普通网页里的媒体。
+当前测试引擎 `2026.10.26` 包含 **1,753 个非 Generic 解析器**；
+解析器数量不等于独立网站数量，界面通过接口读取运行版本的实际数量。
+它会随引擎升级变化，不以固定“1800”作为成功率承诺。
+
+首页展示常用平台示例，包括：
 
 YouTube、抖音、Instagram、小红书、快手、X、Bilibili、TikTok、Vimeo、
 Facebook、Reddit、Pinterest、Twitch、Dailymotion、SoundCloud、
 微博、AcFun、TED、Tumblr、Bandcamp、Streamable。
 
-“已接入”不等于每条链接都可下载。仅处理公开、单个作品；登录要求、
+还展示 ARTE、Archive.org、Bluesky、Mixcloud、Niconico 等更多示例。
+**列表外的网站也可直接粘贴链接尝试**，列表不是支持上限。
+
+引擎覆盖不等于每条链接都可下载。仅处理公开、单个作品；登录要求、
 地区限制、平台风控、链接失效或版权保护都可能阻止解析。
 仅下载你拥有或获授权的内容，不提供付费权限或 DRM 绕过。
 
@@ -41,17 +53,16 @@ Facebook、Reddit、Pinterest、Twitch、Dailymotion、SoundCloud、
 
 | | 在线版 | 桌面版 |
 | --- | --- | --- |
-| 使用方式 | 浏览器直接使用 | 安装应用，内置 FFmpeg 与独立 yt-dlp |
+| 使用方式 | 浏览器直接使用 | 安装应用，内置 FFmpeg、独立 yt-dlp 与 Node.js |
 | 下载 | 完整音视频直链或明确标注的独立音频 | 可合并分离音视频，最高 1080p |
 | 转换与压缩 | FFmpeg.wasm，本机处理 | 原生 FFmpeg，本机处理 |
 | 文件大小 | 在线下载与转换限制 500 MB | 更适合大文件，受设备资源与平台条件限制 |
 
-macOS 1.1.0 安装包适用于 Apple Silicon。当前使用临时签名，**尚未通过 Apple 公证**。
+macOS 1.2.0 安装包适用于 Apple Silicon。当前使用临时签名，**尚未通过 Apple 公证**。
 安装后如系统提示无法打开，确认来源可信，再按官网安装说明处理。
 Windows 已配置自动构建流程，但尚未确认构建成功和安装包发布；Intel Mac 安装包未发布。
-当前桌面安装包未内置额外 JavaScript runtime，部分 YouTube 作品仍可能受限。
-
-最新源码包含后续 UI 打磨，现有 1.1.0 DMG 不代表包含每一次后续界面更新。
+1.2.0 包含新版 Logo、粒子页脚、自有解析引擎与内置 JavaScript runtime。
+历史 1.0.0/1.1.0 包不随源码更新，仍保留原有能力与限制。
 
 ## 本地开发
 
@@ -88,12 +99,13 @@ npm run dev
 
 当前官网的 Vercel **Root Directory 为 `video-compressor`**。
 必须同时部署 TypeScript/Python Functions；仅托管 `dist/` 无法提供完整下载功能。
-应用无需用户填写 API 密钥，但解析服务与平台的可用性不受轻影控制。
+应用无需用户填写 API 密钥。解析逻辑由轻影自己运行，作品平台的访问条件仍不受轻影控制。
 
 ## 技术与第三方
 
 React 19、TypeScript、Vite、Tailwind CSS、Tauri v2、Rust、
 FFmpeg.wasm、FFmpeg 与 yt-dlp。
+粒子页脚改编自 Dissolve 的 MIT 实现，见[第三方声明](video-compressor/THIRD_PARTY_NOTICES.md)。
 
 LibreGet 仅提供架构参考，没有复制其应用源码。FFmpeg、yt-dlp 及其打包依赖
 分别遵循各自许可证，不能将整个分发包统一描述为 MIT。

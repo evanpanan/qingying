@@ -1,7 +1,10 @@
 {
   "functions": {
-    "api/*.ts": {
+    "api/parse.ts": {
       "maxDuration": 60
+    },
+    "api/proxy.ts": {
+      "maxDuration": 300
     },
     "api/extract.py": {
       "maxDuration": 60

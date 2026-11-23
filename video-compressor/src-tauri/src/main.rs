@@ -2,7 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use serde::{Deserialize, Serialize};
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use tauri::{Emitter, Manager};
@@ -360,187 +360,47 @@ fn downloader_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
             return Ok(path);
         }
     }
-    which::which("yt-dlp").map_err(|_| "下载引擎缺失，请重新安装最新版轻影".into())
+    Err("自有下载引擎缺失，请重新安装最新版轻影".into())
 }
 
 fn validate_share_url(url: &str) -> Result<(), String> {
     let parsed = tauri::Url::parse(url).map_err(|_| "链接格式不正确")?;
-    let hosts = [
-        "youtube.com",
-        "youtu.be",
-        "douyin.com",
-        "iesdouyin.com",
-        "instagram.com",
-        "xiaohongshu.com",
-        "xhslink.com",
-        "kuaishou.com",
-        "gifshow.com",
-        "twitter.com",
-        "x.com",
-        "t.co",
-        "bilibili.com",
-        "b23.tv",
-        "tiktok.com",
-        "vimeo.com",
-        "facebook.com",
-        "fb.watch",
-        "reddit.com",
-        "redd.it",
-        "pinterest.com",
-        "pin.it",
-        "twitch.tv",
-        "dailymotion.com",
-        "dai.ly",
-        "soundcloud.com",
-        "weibo.com",
-        "weibo.cn",
-        "acfun.cn",
-        "ted.com",
-        "tumblr.com",
-        "bandcamp.com",
-        "streamable.com",
-    ];
-    let host = parsed.host_str().unwrap_or("").to_lowercase();
+    let host = parsed.host_str().unwrap_or("").trim_end_matches('.').to_lowercase();
     if parsed.scheme() != "https"
         || !parsed.username().is_empty()
         || parsed.password().is_some()
         || parsed.port().is_some_and(|port| port != 443)
-        || !hosts
-            .iter()
-            .any(|h| host == *h || host.ends_with(&format!(".{h}")))
+        || !host.contains('.')
+        || host.parse::<std::net::IpAddr>().is_ok()
+        || host.ends_with(".localhost")
+        || host.ends_with(".local")
+        || host.ends_with(".internal")
     {
-        return Err("请使用支持平台的公开 HTTPS 链接".into());
+        return Err("请使用公开网站的 HTTPS 作品链接".into());
     }
     Ok(())
 }
 
-#[tauri::command]
-async fn native_relay_parse(url: String) -> Result<serde_json::Value, String> {
-    validate_share_url(&url)?;
-    tauri::async_runtime::spawn_blocking(move || {
-        let client = reqwest::blocking::Client::builder()
-            .timeout(std::time::Duration::from_secs(25))
-            .build()
-            .map_err(|e| e.to_string())?;
-        let response = client
-            .post("https://douyin.laobaitv.net/dl/api/parse")
-            .json(&serde_json::json!({ "url": url }))
-            .send()
-            .map_err(|_| "解析服务连接失败")?
-            .error_for_status()
-            .map_err(|_| "解析服务暂时不可用")?;
-        let data: serde_json::Value = response.json().map_err(|_| "解析返回异常")?;
-        if let Some(error) = data.get("error").and_then(|e| e.as_str()) {
-            return Err(error.to_string());
-        }
-        Ok(data)
-    })
-    .await
-    .map_err(|e| e.to_string())?
+fn javascript_runtime(engine: &std::path::Path) -> Result<String, String> {
+    let name = if cfg!(target_os = "windows") { "node.exe" } else { "node" };
+    let runtime = engine.parent().ok_or("下载引擎目录异常")?.join(name);
+    if !runtime.exists() {
+        return Err("内置 JavaScript 引擎缺失，请安装最新版轻影".into());
+    }
+    Ok(format!("node:{}", runtime.to_string_lossy()))
 }
 
 #[tauri::command]
-async fn native_media_download(
-    app: tauri::AppHandle,
-    url: String,
-    task_id: String,
-    ext: String,
-) -> Result<String, String> {
-    let parsed = tauri::Url::parse(&url).map_err(|_| "媒体地址不正确")?;
-    let domains = [
-        "zjcdn.com",
-        "douyinvod.com",
-        "bytecdn.cn",
-        "ibytedtos.com",
-        "xhscdn.com",
-        "xhs.cn",
-        "cdninstagram.com",
-        "fbcdn.net",
-        "twimg.com",
-        "ksyuncdn.com",
-        "kwaicdn.com",
-        "kwai.net",
-        "laobaitv.net",
-        "snssdk.com",
-        "bytedance.com",
-    ];
-    let host = parsed.host_str().unwrap_or("");
-    if parsed.scheme() != "https"
-        || !domains
-            .iter()
-            .any(|h| host == *h || host.ends_with(&format!(".{h}")))
-        || !task_id
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '-')
-        || !["mp4", "jpg", "jpeg", "png", "webp", "webm", "m4a", "mp3"].contains(&ext.as_str())
-    {
-        return Err("媒体地址或文件格式不支持".into());
-    }
+async fn native_engine_info(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let directory = app
-            .path()
-            .download_dir()
-            .map_err(|e| e.to_string())?
-            .join("轻影");
-        std::fs::create_dir_all(&directory).map_err(|e| e.to_string())?;
-        let partial = directory.join(format!("{task_id}.part"));
-        let client = reqwest::blocking::Client::builder()
-            .timeout(std::time::Duration::from_secs(300))
-            .build()
-            .map_err(|e| e.to_string())?;
-        let mut response = client
-            .get(url)
-            .send()
-            .map_err(|_| "无法连接视频资源")?
-            .error_for_status()
-            .map_err(|_| "媒体链接已失效，请重新解析")?;
-        let content_type = response
-            .headers()
-            .get(reqwest::header::CONTENT_TYPE)
-            .and_then(|value| value.to_str().ok())
-            .unwrap_or("");
-        let actual_ext = match content_type.split(';').next().unwrap_or("") {
-            "image/webp" => "webp",
-            "image/png" => "png",
-            "image/jpeg" => "jpg",
-            _ => &ext,
-        };
-        let path = directory.join(format!("{task_id}.{actual_ext}"));
-        let total = response.content_length().unwrap_or(0);
-        let mut file = std::fs::File::create(&partial).map_err(|e| e.to_string())?;
-        let mut buffer = [0; 65536];
-        let mut downloaded = 0_u64;
-        let result = (|| -> Result<(), String> {
-            loop {
-                let count = response.read(&mut buffer).map_err(|e| e.to_string())?;
-                if count == 0 {
-                    break;
-                }
-                file.write_all(&buffer[..count])
-                    .map_err(|e| e.to_string())?;
-                downloaded += count as u64;
-                if total > 0 {
-                    let _ = app.emit(
-                        "download-progress",
-                        ProgressPayload {
-                            task_id: task_id.clone(),
-                            progress: ((downloaded as f64 / total as f64) * 100.0).min(99.0) as u8,
-                        },
-                    );
-                }
-            }
-            if downloaded == 0 {
-                return Err("下载文件为空".into());
-            }
-            Ok(())
-        })();
-        drop(file);
-        if let Err(error) = result {
-            let _ = std::fs::remove_file(&partial);
-            return Err(error);
+        let output = media_command(downloader_path(&app)?)
+            .arg("--lightvid-info")
+            .output()
+            .map_err(|e| format!("启动下载引擎失败：{e}"))?;
+        if !output.status.success() {
+            return Err("请安装包含自有引擎的最新版轻影".into());
         }
-        std::fs::rename(partial, &path).map_err(|e| e.to_string())?;
-        Ok(path.to_string_lossy().to_string())
+        serde_json::from_slice(&output.stdout).map_err(|_| "引擎信息返回异常".into())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -550,11 +410,18 @@ async fn native_media_download(
 async fn native_extract(app: tauri::AppHandle, url: String) -> Result<serde_json::Value, String> {
     validate_share_url(&url)?;
     tauri::async_runtime::spawn_blocking(move || {
-        let output = media_command(downloader_path(&app)?)
+        let engine = downloader_path(&app)?;
+        let runtime = javascript_runtime(&engine)?;
+        let output = media_command(engine)
             .args([
+                "--ignore-config",
+                "--js-runtimes",
+                &runtime,
                 "--dump-single-json",
                 "--skip-download",
                 "--no-playlist",
+                "--playlist-items",
+                "1",
                 "--no-warnings",
                 "--socket-timeout",
                 "12",
@@ -601,9 +468,16 @@ async fn native_download(
             .join(format!("{task_id}-%(title).80B.%(ext)s"))
             .to_string_lossy()
             .to_string();
-        let mut child = media_command(downloader_path(&app)?)
+        let engine = downloader_path(&app)?;
+        let runtime = javascript_runtime(&engine)?;
+        let mut child = media_command(engine)
             .args([
+                "--ignore-config",
+                "--js-runtimes",
+                &runtime,
                 "--no-playlist",
+                "--playlist-items",
+                "1",
                 "--no-warnings",
                 "--no-overwrites",
                 "--no-simulate",
@@ -728,9 +602,8 @@ pub fn run() {
             compress_video,
             convert_video,
             native_extract,
+            native_engine_info,
             native_download,
-            native_relay_parse,
-            native_media_download,
             reveal_in_finder
         ])
         .run(tauri::generate_context!())
@@ -746,24 +619,28 @@ mod tests {
     use super::validate_share_url;
 
     #[test]
-    fn accepts_public_supported_sites() {
+    fn accepts_public_sites_beyond_featured_list() {
         for url in [
             "https://youtu.be/video",
             "https://www.instagram.com/reel/123",
             "https://www.bilibili.com/video/BV1",
             "https://www.ted.com/talks/test",
             "https://v.douyin.com/test/",
+            "https://www.arte.tv/video",
+            "https://video.example.org/watch",
+            "https://youtube.com.attacker.example/file",
         ] {
             assert!(validate_share_url(url).is_ok());
         }
     }
 
     #[test]
-    fn rejects_private_and_lookalike_urls() {
+    fn rejects_local_and_unsafe_urls() {
         for url in [
             "https://localhost/file",
             "https://127.0.0.1/file",
-            "https://youtube.com.attacker.example/file",
+            "https://host.local/file",
+            "https://host.internal/file",
             "http://youtube.com/file",
             "https://youtube.com:8000/file",
             "https://user:password@youtube.com/file",

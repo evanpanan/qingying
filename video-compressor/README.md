@@ -8,7 +8,7 @@
 
 ## 功能与入口
 
-- 首页与 `#download`：链接解析、21 平台目录、文件保存和本机下载记录。
+- 首页与 `#download`：自有全量解析引擎、常用平台示例、文件保存和本机下载记录。
 - `#convert`：MP4、MOV、MKV、WebM、MP3，批量重新编码与音频提取。
 - `#compress`：画质、分辨率设置与批量压缩。
 - 共享界面：自动循环演示、悬停光影、柔和焦点、手机触控与减少动态效果支持。
@@ -53,12 +53,22 @@ $env:LIGHTVID_PYTHON = (Resolve-Path .\.venv\Scripts\python.exe).Path
 npm run dev
 ```
 
-访问 <http://localhost:1420>。本地 Vite 中间件提供 `/api/parse`、`/api/proxy`
-和 `/api/extract`；后者调用 Python。需要选择其他解释器时设置 `LIGHTVID_PYTHON`。
+访问 <http://localhost:1420>。本地 Vite 中间件提供 `/api/extract`、`/api/proxy`
+和旧入口 `/api/parse`；解析调用 Python。需要选择其他解释器时设置 `LIGHTVID_PYTHON`。
 
 ```bash
 LIGHTVID_PYTHON=/path/to/python3 npm run dev
 ```
+
+`GET /api/extract` 返回运行中的引擎版本、解析器数量和 Generic 探测能力。
+`POST /api/extract` 使用轻影自己的引擎直接解析；旧 `/api/parse` 以 307 重定向到它。
+推荐平台目录不作为白名单；移除了第三方解析和 X 的 fxtwitter 回退。
+
+`lightvid_engine.py` 在提取器请求、子请求和重定向中限制公开 HTTP(S)，
+仅使用 IPv4 DNS，验证全部返回地址，并通过固定 IP 连接防止校验后重新解析。
+保留 TLS 域名验证，不使用系统代理或不受限的备用传输。
+在线解析有请求数量与时长预算，只有直接媒体可在浏览器保存；
+分离音视频与分片流需要桌面引擎处理。没有绕过 DRM、登录或付费限制。
 
 `npm run preview` 仅预览静态构建，不挂载本地解析函数，
 不能替代完整的下载功能开发服务器。
@@ -84,8 +94,8 @@ Safari 已添加到程序坞的 Web App 会保存自己的图标，网站更新�
 
 ## 桌面引擎
 
-`src-tauri/binaries/` 被 Git 忽略，干净克隆后需要创建目录并准备两个引擎。
-Tauri 按当前目标平台寻找对应文件，不能仅准备 FFmpeg。
+`src-tauri/binaries/` 被 Git 忽略，干净克隆后需要创建目录并准备三个引擎。
+Tauri 按当前目标平台寻找 FFmpeg、yt-dlp 与 Node.js，不能仅准备 FFmpeg。
 
 | 目标 | FFmpeg 文件名 | yt-dlp 文件名 |
 | --- | --- | --- |
@@ -96,8 +106,10 @@ Tauri 按当前目标平台寻找对应文件，不能仅准备 FFmpeg。
 FFmpeg 可从 [FFmpeg 下载页](https://ffmpeg.org/download.html)选择可信的平台构建；
 Windows 工作流使用 [Gyan essentials](https://www.gyan.dev/ffmpeg/builds/)。
 构建需包含 `libx264`、AAC、`libvpx`、`libopus`、`libmp3lame`，
-对应当前五种转换格式。yt-dlp 可使用[官方独立发行版](https://github.com/yt-dlp/yt-dlp/releases)。
-macOS 上给两个引擎设置可执行权限。
+对应当前五种转换格式。yt-dlp 必须从 `scripts/ytdlp_entry.py` 打包，
+以包含轻影的网络传输和能力查询，不能直接替换为官方独立发行版。
+另需 `node-<target-triple>`（Windows 带 `.exe`）与对应 `NODE_LICENSE`。
+macOS 上给三个引擎设置可执行权限。
 
 当前 Apple Silicon 包使用 PyInstaller 打包独立 yt-dlp 与 Python 运行时。
 可在 Apple Silicon Mac 的虚拟环境中生成：
@@ -105,14 +117,20 @@ macOS 上给两个引擎设置可执行权限。
 ```bash
 mkdir -p src-tauri/binaries
 python3 -m pip install -r requirements.txt pyinstaller
-python3 -m PyInstaller --onefile --collect-all yt_dlp --collect-all yt_dlp_ejs \
+python3 -m PyInstaller --onefile --paths . --collect-all yt_dlp --collect-all yt_dlp_ejs \
   --name yt-dlp-aarch64-apple-darwin --distpath src-tauri/binaries \
   --workpath /tmp/lightvid-engine-build --specpath /tmp scripts/ytdlp_entry.py
+cp /tmp/node-v25.8.0-darwin-arm64/bin/node src-tauri/binaries/node-aarch64-apple-darwin
 chmod +x src-tauri/binaries/ffmpeg-aarch64-apple-darwin \
-  src-tauri/binaries/yt-dlp-aarch64-apple-darwin
+  src-tauri/binaries/yt-dlp-aarch64-apple-darwin \
+  src-tauri/binaries/node-aarch64-apple-darwin
 ```
 
-该命令不负责下载 FFmpeg；请先准备表中对应文件。
+该命令不负责下载 FFmpeg 和 Node；请先准备表中对应文件，
+并从 Node.js 官方下载、校验和解压匹配架构的独立发行版到上述目录。
+不要复制 Homebrew Node，它可能依赖目标电脑上不存在的 Homebrew 动态库。
+在线媒体透传最长约 280 秒，极慢源或大文件建议使用桌面版本。
+分发时同步 `NODE_LICENSE` 到所用 Node.js 版本的完整许可证声明。
 Intel Mac 的引擎必须在匹配架构的环境中准备，现有 ARM 包不能直接用于 Intel。
 
 ## 运行与构建
@@ -158,26 +176,27 @@ Python 测试需要已安装 `requirements.txt`。Windows 可使用
 准备好原生引擎后，在 `src-tauri/` 内运行 `cargo test` 检查 Rust 测试。
 
 UI 回归应覆盖默认自动播放、悬停、离开后恢复、暂停/继续、键盘焦点、
-平台搜索、作者链接、手机触控与减少动态效果。
+平台搜索、作者链接、手机触控与减少动态效果。页脚粒子文字应验证自动变换、
+鼠标避让、点击和键盘散开、离屏暂停及减少动画偏好动态切换。
 交互演示中的文件大小不是实际任务进度。
 
 ## Vercel 部署
 
 - 项目 Root Directory：`video-compressor`，不是仓库根目录或历史 `website/`。
 - 构建命令：`npm run build`；静态输出目录：`dist`。
-- 同时保留 `api/*.ts`、`api/extract.py`、`requirements.txt` 和 `vercel.json`。
+- 同时保留 `api/*.ts`、`api/extract.py`、`lightvid_engine.py`、`requirements.txt` 和 `vercel.json`。
 - `requirements.txt` 位于应用根目录，供 Python Function 安装解析依赖。
 - 不要仅上传静态 `dist/`：这种方式无法运行完整的下载后端。
-- 解析依赖第三方中转、yt-dlp 和平台访问条件，部署成功不代表所有作品都可下载。
+- 解析由轻影部署的 yt-dlp 自行运行，不依赖第三方解析 API；平台访问条件仍影响成功率。
 
 ## 发布与限制
 
-现有 [macOS 1.1.0 DMG](public/downloads/轻影_1.1.0_aarch64.dmg)
-包含 FFmpeg 与独立 yt-dlp，适用于 Apple Silicon，使用临时签名、未 Apple 公证。
-它早于后续 UI 打磨，更新源码不会自动改写已打包的 DMG。
+新版 [macOS 1.2.0 DMG](public/downloads/轻影_1.2.0_aarch64.dmg)
+包含 FFmpeg、自有 yt-dlp 与 Node.js，适用于 Apple Silicon，使用临时签名、未 Apple 公证。
+同步了新版 Logo、自动动效、粒子页脚和广覆盖解析。历史包不会随源码自动更新。
 当前未发布 Intel Mac 包，也未确认 Windows 包发布。
 
-下载引擎可能需要随平台规则更新。桌面包尚未内置额外 JavaScript runtime，
+下载引擎可能需要随平台规则更新。即使内置 JavaScript runtime，
 部分 YouTube 挑战仍可能失败；登录、地区、风控和 DRM 限制不会被自动绕过。
 
 ## 代码索引
@@ -187,6 +206,8 @@ UI 回归应覆盖默认自动播放、悬停、离开后恢复、暂停/继续�
 | `src/pages/Landing.tsx` | 当前首页、平台列表、作者页脚 |
 | `src/components/ExperienceGallery.tsx` | 自动演示与悬停、触控生命周期 |
 | `src/components/DownloadTool.tsx` | 下载交互、结果与记录 |
+| `src/components/ParticleWordmark.tsx` | Dissolve 风格粒子页脚 |
+| `lightvid_engine.py` | 在线与桌面共用的自有解析网络传输 |
 | `src/pages/Convert.tsx` | 批量格式转换 |
 | `src/lib/media.ts` | 平台目录、格式配置与结果类型 |
 | `src/lib/ffmpeg.wasm.ts` | 浏览器串行编码队列 |

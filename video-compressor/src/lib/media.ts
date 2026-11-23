@@ -1,10 +1,10 @@
 export const PLATFORMS = [
   { name: 'YouTube', hosts: ['youtube.com', 'youtu.be'], engine: 'extract' },
-  { name: '抖音', hosts: ['douyin.com', 'iesdouyin.com'], engine: 'relay' },
-  { name: 'Instagram', hosts: ['instagram.com', 'instagr.am'], engine: 'relay' },
-  { name: '小红书', hosts: ['xiaohongshu.com', 'xhslink.com'], engine: 'relay' },
-  { name: '快手', hosts: ['kuaishou.com', 'gifshow.com'], engine: 'relay' },
-  { name: 'X', hosts: ['x.com', 'twitter.com', 't.co'], engine: 'relay' },
+  { name: '抖音', hosts: ['douyin.com', 'iesdouyin.com'], engine: 'extract' },
+  { name: 'Instagram', hosts: ['instagram.com', 'instagr.am'], engine: 'extract' },
+  { name: '小红书', hosts: ['xiaohongshu.com', 'xhslink.com'], engine: 'extract' },
+  { name: '快手', hosts: ['kuaishou.com', 'gifshow.com'], engine: 'extract' },
+  { name: 'X', hosts: ['x.com', 'twitter.com', 't.co'], engine: 'extract' },
   { name: 'Bilibili', hosts: ['bilibili.com', 'b23.tv'], engine: 'extract' },
   { name: 'TikTok', hosts: ['tiktok.com'], engine: 'extract' },
   { name: 'Vimeo', hosts: ['vimeo.com'], engine: 'extract' },
@@ -20,20 +20,59 @@ export const PLATFORMS = [
   { name: 'Tumblr', hosts: ['tumblr.com'], engine: 'extract' },
   { name: 'Bandcamp', hosts: ['bandcamp.com'], engine: 'extract' },
   { name: 'Streamable', hosts: ['streamable.com'], engine: 'extract' },
+  { name: '网易云音乐', hosts: ['music.163.com'], engine: 'extract' },
+  { name: 'QQ 音乐', hosts: ['y.qq.com'], engine: 'extract' },
+  { name: '西瓜视频', hosts: ['ixigua.com'], engine: 'extract' },
+  { name: '优酷', hosts: ['youku.com'], engine: 'extract' },
+  { name: '爱奇艺', hosts: ['iqiyi.com'], engine: 'extract' },
+  { name: '腾讯视频', hosts: ['v.qq.com'], engine: 'extract' },
+  { name: 'Niconico', hosts: ['nicovideo.jp'], engine: 'extract' },
+  { name: 'Mixcloud', hosts: ['mixcloud.com'], engine: 'extract' },
+  { name: 'Audiomack', hosts: ['audiomack.com'], engine: 'extract' },
+  { name: 'Archive.org', hosts: ['archive.org'], engine: 'extract' },
+  { name: 'PeerTube', hosts: ['framatube.org'], engine: 'extract' },
+  { name: 'Rumble', hosts: ['rumble.com'], engine: 'extract' },
+  { name: 'Odysee', hosts: ['odysee.com'], engine: 'extract' },
+  { name: 'Bluesky', hosts: ['bsky.app'], engine: 'extract' },
+  { name: 'LinkedIn', hosts: ['linkedin.com'], engine: 'extract' },
+  { name: 'Snapchat', hosts: ['snapchat.com'], engine: 'extract' },
+  { name: '9GAG', hosts: ['9gag.com'], engine: 'extract' },
+  { name: 'Coub', hosts: ['coub.com'], engine: 'extract' },
+  { name: 'Imgur', hosts: ['imgur.com'], engine: 'extract' },
+  { name: 'Kick', hosts: ['kick.com'], engine: 'extract' },
+  { name: 'Bitchute', hosts: ['bitchute.com'], engine: 'extract' },
+  { name: 'Sohu', hosts: ['tv.sohu.com'], engine: 'extract' },
+  { name: 'ESPN', hosts: ['espn.com'], engine: 'extract' },
+  { name: 'BBC', hosts: ['bbc.com', 'bbc.co.uk'], engine: 'extract' },
+  { name: 'CNN', hosts: ['cnn.com'], engine: 'extract' },
+  { name: 'ARTE', hosts: ['arte.tv'], engine: 'extract' },
+  { name: 'ZDF', hosts: ['zdf.de'], engine: 'extract' },
+  { name: 'SBS', hosts: ['sbs.com.au'], engine: 'extract' },
+  { name: 'NRK', hosts: ['nrk.no'], engine: 'extract' },
+  { name: 'Khan Academy', hosts: ['khanacademy.org'], engine: 'extract' },
+  { name: 'Udemy', hosts: ['udemy.com'], engine: 'extract' },
+  { name: 'Coursera', hosts: ['coursera.org'], engine: 'extract' },
 ] as const
 
 export function shareUrl(text: string): string {
   const match = text.match(/https?:\/\/[^\s"'“”‘’，。、；：）)】》>]+/i)
   if (!match) throw new Error('请粘贴包含链接的分享文案')
   const url = new URL(match[0])
-  if (url.username || url.password) throw new Error('链接格式不正确')
+  const host = url.hostname.toLowerCase().replace(/\.$/, '')
+  if (url.protocol !== 'https:' || url.username || url.password ||
+      (url.port && url.port !== '443') || !host.includes('.') ||
+      /^[\d.]+$/.test(host) || host.includes(':') ||
+      /\.(localhost|local|internal)$/.test(host)) {
+    throw new Error('请使用公开网站的 HTTPS 作品链接')
+  }
   return url.href
 }
 
 export function identifyPlatform(text: string) {
   try {
     const host = new URL(shareUrl(text)).hostname.toLowerCase()
-    return PLATFORMS.find((p) => p.hosts.some((h) => host === h || host.endsWith(`.${h}`)))
+    return PLATFORMS.find((p) => p.hosts.some((h) => host === h || host.endsWith(`.${h}`))) ??
+      { name: host.replace(/^www\./, ''), hosts: [host], engine: 'extract' as const }
   } catch {
     return undefined
   }
@@ -68,4 +107,13 @@ export interface DownloadData {
   url?: string
   formats?: DownloadFormat[]
   images?: { url: string }[]
+  engine?: EngineInfo
+}
+
+export interface EngineInfo {
+  name: string
+  version: string
+  extractors: number
+  generic: boolean
+  thirdPartyParser: boolean
 }

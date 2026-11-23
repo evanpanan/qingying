@@ -17,11 +17,15 @@ function historyItem(title: string, url: string): RecordItem {
 }
 
 function normalizeNative(info: any, platformName: string): DownloadData {
-  const formats: DownloadFormat[] = (info.formats || []).filter((f: any) =>
-    f.url?.startsWith('https://') && f.acodec && f.acodec !== 'none' &&
-    ['https', 'http'].includes(f.protocol),
-  ).map((f: any) => ({ id: String(f.format_id), label: f.height ? `${f.height}p · ${f.ext}` : `音频 · ${f.ext}`, url: f.url, ext: f.ext, audioOnly: f.vcodec === 'none' })).reverse()
-  return { title: info.title, author: info.uploader, platformName, type: (info.formats || []).some((f: any) => f.vcodec && f.vcodec !== 'none') ? 'video' : 'audio', formats, url: formats[0]?.url }
+  if (!info || ['playlist', 'multi_video'].includes(info._type)) throw new Error('请使用单个作品链接')
+  if (info.is_live) throw new Error('暂不支持持续录制直播，请使用已发布的作品')
+  const source = info.formats || [info]
+  const video = source.some((f: any) => f.vcodec ? f.vcodec !== 'none' : ['mp4', 'mov', 'webm', 'mkv', 'm4v', 'avi'].includes(f.ext))
+  const formats: DownloadFormat[] = source.filter((f: any) =>
+    f.url?.startsWith('https://') && !f.has_drm && f.acodec !== 'none' &&
+    ['https', 'http', undefined].includes(f.protocol),
+  ).map((f: any) => ({ id: String(f.format_id), label: f.height ? `${f.height}p · ${f.ext}` : `原文件 · ${f.ext}`, url: f.url, ext: f.ext, audioOnly: f.vcodec === 'none' })).reverse()
+  return { title: info.title, author: info.uploader, platformName, type: video ? 'video' : 'audio', formats, url: formats[0]?.url }
 }
 
 export default function DownloadTool() {
@@ -30,7 +34,6 @@ export default function DownloadTool() {
   const [error, setError] = useState('')
   const [data, setData] = useState<DownloadData | null>(null)
   const [selected, setSelected] = useState(0)
-  const [sourceEngine, setSourceEngine] = useState<'relay' | 'extract'>('extract')
   const [saving, setSaving] = useState(false)
   const [progress, setProgress] = useState<number | null>(null)
   const [savedPath, setSavedPath] = useState('')
@@ -48,31 +51,21 @@ export default function DownloadTool() {
     setError('')
     let url: string
     try { url = shareUrl(input) } catch (e) { setError((e as Error).message); return }
-    if (!platform) { setError('暂不支持这个网站，请查看下方平台列表'); return }
     setBusy(true)
     setData(null)
     setSavedPath('')
     setSelected(0)
     sourceRef.current = url
-    setSourceEngine(platform.engine)
     const controller = new AbortController()
     requestRef.current = controller
     const timeout = window.setTimeout(() => controller.abort(), 55000)
     try {
       let result: DownloadData
       if (isTauri()) {
-        if (platform.engine === 'relay') {
-          const info: any = await invoke('native_relay_parse', { url })
-          result = { platformName: platform.name, title: info.title, author: info.author,
-            type: info.type, url: info.videoUrl || info.videoVariants?.[0]?.url,
-            images: info.images?.map((i: any) => ({ url: i.url })) }
-          if (!result.url && !result.images?.length) throw new Error('未解析到可下载文件')
-        } else {
-          const info = await invoke('native_extract', { url })
-          result = normalizeNative(info, platform.name)
-        }
+        const info: any = await invoke('native_extract', { url })
+        result = normalizeNative(info, platform?.name || info.extractor_key || new URL(url).hostname)
       } else {
-        const response = await fetch(platform.engine === 'relay' ? '/api/parse' : '/api/extract', {
+        const response = await fetch('/api/extract', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url }), signal: controller.signal,
         })
@@ -103,10 +96,7 @@ export default function DownloadTool() {
           if (event.payload.task_id === taskId) setProgress(event.payload.progress)
         })
         try {
-          const relay = identifyPlatform(sourceRef.current)?.engine === 'relay'
-          const path = relay && url
-            ? await invoke<string>('native_media_download', { url, taskId, ext })
-            : await invoke<string>('native_download', { url: sourceRef.current, taskId })
+          const path = await invoke<string>('native_download', { url: sourceRef.current, taskId })
           setSavedPath(path)
         } finally { unlisten() }
       } else {
@@ -171,7 +161,7 @@ export default function DownloadTool() {
         {data.type === 'image' ? <div className="image-results">{data.images?.map((image, index) => <button key={`${index}-${image.url}`} onClick={() => void save(image.url, 'jpg', index)} disabled={saving}><img alt={`图片 ${index + 1}`} src={`/api/proxy?url=${encodeURIComponent(image.url)}`} loading="lazy" /><span><ArrowDown size={15} />保存 {index + 1}</span></button>)}</div> : <>
           {!isTauri() && formats.length > 1 && <div className="format-choices">{formats.map((f, index) => <button key={f.id} disabled={saving} className={index === selected ? 'selected' : ''} onClick={() => setSelected(index)}>{f.label}</button>)}</div>}
           {!isTauri() && current && (current.audioOnly || data.type === 'audio' ? <audio controls src={`/api/proxy?url=${encodeURIComponent(current.url)}`} /> : <video key={current.id} controls playsInline preload="none" src={`/api/proxy?url=${encodeURIComponent(current.url)}`} />)}
-          <button className="primary-button" disabled={saving} onClick={() => void save(current?.url, current?.ext)}><ArrowDown size={18} />{saving ? `保存中${progress !== null ? ` ${progress}%` : ''}` : isTauri() ? data.type === 'audio' ? '保存音频' : sourceEngine === 'relay' ? '保存原视频' : '保存完整视频 · 最高 1080p' : `保存 ${current?.label || '文件'}`}</button>
+          <button className="primary-button" disabled={saving} onClick={() => void save(current?.url, current?.ext)}><ArrowDown size={18} />{saving ? `保存中${progress !== null ? ` ${progress}%` : ''}` : isTauri() ? data.type === 'audio' ? '保存音频' : '保存完整视频 · 最高 1080p' : `保存 ${current?.label || '文件'}`}</button>
         </>}
         {saving && <div className={`job-progress ${progress === null ? 'indeterminate' : ''}`} role="progressbar" aria-label="下载进度" aria-valuenow={progress ?? undefined}><span style={{ width: progress === null ? '35%' : `${progress}%` }} /></div>}
         {savedPath && !saving && <div className="success-note"><Check size={17} />文件已保存{isTauri() && <button className="quiet-button" onClick={() => void invoke('reveal_in_finder', { path: savedPath }).catch(() => setError('无法打开文件目录'))}><FolderOpen size={16} />打开目录</button>}</div>}

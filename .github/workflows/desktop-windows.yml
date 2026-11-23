@@ -7,6 +7,9 @@ on:
       - video-compressor/src/**
       - video-compressor/src-tauri/**
       - video-compressor/package*.json
+      - video-compressor/scripts/ytdlp_entry.py
+      - video-compressor/lightvid_engine.py
+      - video-compressor/requirements.txt
       - .github/workflows/desktop-windows.yml
 permissions:
   contents: read
@@ -24,6 +27,9 @@ jobs:
           cache: npm
           cache-dependency-path: video-compressor/package-lock.json
       - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - run: npm ci
       - name: Prepare native engines
         shell: pwsh
@@ -33,12 +39,17 @@ jobs:
           Expand-Archive "$env:RUNNER_TEMP/ffmpeg.zip" "$env:RUNNER_TEMP/ffmpeg"
           $ffmpeg = Get-ChildItem "$env:RUNNER_TEMP/ffmpeg" -Filter ffmpeg.exe -Recurse | Select-Object -First 1
           Copy-Item $ffmpeg.FullName src-tauri/binaries/ffmpeg-x86_64-pc-windows-msvc.exe
-          Invoke-WebRequest https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe -OutFile src-tauri/binaries/yt-dlp-x86_64-pc-windows-msvc.exe
+          python -m pip install -r requirements.txt pyinstaller
+          python -m PyInstaller --onefile --paths . --collect-all yt_dlp --collect-all yt_dlp_ejs --name yt-dlp-x86_64-pc-windows-msvc --distpath src-tauri/binaries --workpath "$env:RUNNER_TEMP/lightvid-engine" --specpath "$env:RUNNER_TEMP" scripts/ytdlp_entry.py
+          Copy-Item (Get-Command node).Source src-tauri/binaries/node-x86_64-pc-windows-msvc.exe
+          $nodeVersion = node --version
+          Invoke-WebRequest "https://nodejs.org/dist/$nodeVersion/LICENSE" -OutFile NODE_LICENSE
       - run: npm test
+      - run: npm run test:extract
       - run: npm run tauri:build -- --bundles nsis,msi
       - uses: actions/upload-artifact@v4
         with:
-          name: LightVid-Windows-1.1.0
+          name: LightVid-Windows-1.2.0
           path: |
             video-compressor/src-tauri/target/release/bundle/nsis/*.exe
             video-compressor/src-tauri/target/release/bundle/msi/*.msi

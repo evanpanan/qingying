@@ -10,7 +10,7 @@ spec.loader.exec_module(module)
 
 class ExtractTests(unittest.TestCase):
     def mock_info(self, info):
-        mocked = patch.object(module.yt_dlp, "YoutubeDL")
+        mocked = patch.object(module, "LightVidDL")
         downloader = mocked.start()
         self.addCleanup(mocked.stop)
         downloader.return_value.__enter__.return_value.extract_info.return_value = info
@@ -28,11 +28,28 @@ class ExtractTests(unittest.TestCase):
         self.assertEqual(result["formats"][0]["id"], "complete")
         self.assertEqual(len(result["formats"]), 2)
 
-    def test_private_urls_and_lookalikes_are_rejected(self):
-        for url in ("https://localhost/a", "https://youtube.com.attacker.example/a",
+    def test_unsafe_entry_urls_are_rejected(self):
+        for url in ("https://localhost/a", "https://127.0.0.1/a", "https://host.local/a",
                     "http://youtube.com/a", "https://user:password@youtube.com/a"):
             with self.assertRaises(ValueError):
                 module.extract(url)
+
+    def test_unlisted_website_uses_own_engine(self):
+        self.mock_info({"title": "Public", "extractor_key": "Generic", "formats": [
+            {"url": "https://media.example.org/video.mp4", "vcodec": "h264",
+             "acodec": "aac", "ext": "mp4"},
+        ]})
+        result = module.extract("https://unlisted.example.org/watch")
+        self.assertEqual(result["platformName"], "Generic")
+        self.assertFalse(result["engine"]["thirdPartyParser"])
+
+    def test_drm_and_private_media_are_not_offered(self):
+        self.mock_info({"formats": [
+            {"url": "https://127.0.0.1/file", "vcodec": "h264", "acodec": "aac"},
+            {"url": "https://cdn.example/drm", "vcodec": "h264", "acodec": "aac", "has_drm": True},
+        ]})
+        with self.assertRaises(ValueError):
+            module.extract("https://unlisted.example.org/watch")
 
     def test_playlist_is_rejected(self):
         self.mock_info({"_type": "playlist"})
