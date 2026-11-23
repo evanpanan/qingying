@@ -62,6 +62,21 @@ test('数据库断连返回 503，不生成虚假数字，不暴露连接信息'
   assert.equal(result.headers['Cache-Control'], 'no-store')
   assert(!('data' in result.data))
   assert(!JSON.stringify(result.data).includes('secret'))
+  assert(!JSON.stringify(result.headers).includes('secret'))
+  assert.equal(result.headers['X-Lightvid-Stats-Diagnostic'], 'UNKNOWN')
+})
+
+test('临时统计诊断只公开允许的错误码，不泄漏连接串或任意错误文本', async () => {
+  for (const code of ['SELF_SIGNED_CERT_IN_CHAIN', '28P01', '42P01', 'ENOTFOUND', 'private-secret\r\n']) {
+    const handler = createStatsHandler(() => {
+      throw Object.assign(new Error('postgresql://private:secret@database.example/db'), { code })
+    })
+    const result = response()
+    await handler({ method: 'GET', headers: {} }, result)
+    assert.equal(result.code, 503)
+    assert.equal(result.headers['X-Lightvid-Stats-Diagnostic'], code.includes('secret') ? 'UNKNOWN' : code)
+    assert(!JSON.stringify(result).includes('secret'))
+  }
 })
 
 test('远端 PostgreSQL 强制校验证书，本机测试连接例外', () => {

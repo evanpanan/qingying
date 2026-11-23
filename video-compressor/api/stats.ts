@@ -57,6 +57,17 @@ export function createStatsHandler(getStore: () => StatsStore = getStatsStore) {
       if (!event) res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=3')
       res.status(200).json({ ok: true, data })
     } catch (error) {
+      // #region debug-point A:deployment-environment
+      res.setHeader('X-Lightvid-Stats-Environment', process.env.LIGHTVID_STATS_DATABASE_URL || process.env.POSTGRES_URL || process.env.DATABASE_URL ? 'present' : 'missing')
+      // #endregion
+      // #region debug-point B:connection-C:tls-D:schema
+      const diagnostic = error as { code?: string; message?: string }
+      const safeCodes = ['CERT_HAS_EXPIRED', 'ERR_TLS_CERT_ALTNAME_INVALID', 'DEPTH_ZERO_SELF_SIGNED_CERT', 'SELF_SIGNED_CERT_IN_CHAIN', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY', 'ENOTFOUND', 'ETIMEDOUT', 'ECONNREFUSED', 'ECONNRESET', 'EHOSTUNREACH', 'ENETUNREACH', '28P01', '28000', '3D000', '42P01', '42501', '53300', '57P03']
+      res.setHeader('X-Lightvid-Stats-Diagnostic', safeCodes.includes(diagnostic?.code || '') ? diagnostic.code! : diagnostic?.message === '统计数据库尚未连接' ? 'DATABASE_MISSING' : diagnostic?.message === '统计数据尚未初始化' ? 'STATS_NOT_INITIALIZED' : /timeout/i.test(diagnostic?.message || '') ? 'CONNECTION_TIMEOUT' : 'UNKNOWN')
+      // #endregion
+      // #region debug-point A:active-revision
+      res.setHeader('X-Lightvid-Stats-Revision', /^[a-f0-9]{40}$/i.test(process.env.VERCEL_GIT_COMMIT_SHA || '') ? process.env.VERCEL_GIT_COMMIT_SHA! : 'unknown')
+      // #endregion
       if (error instanceof StatsRateLimitError) {
         res.setHeader('Retry-After', '60')
         res.status(429).json({ ok: false, error: '统计事件过于频繁，请稍后重试' })
