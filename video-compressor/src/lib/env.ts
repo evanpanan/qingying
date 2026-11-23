@@ -1,10 +1,8 @@
-/**
- * Detect the runtime environment.
- * - Tauri (desktop app): has window.__TAURI__
- * - Browser (web/online): no Tauri
- */
+import { isTauri as detectTauri } from '@tauri-apps/api/core'
+
+/** Use Tauri 2's runtime marker, independent of withGlobalTauri. */
 export function isTauri(): boolean {
-  return typeof window !== 'undefined' && !!(window as any).__TAURI__
+  return detectTauri()
 }
 
 /**

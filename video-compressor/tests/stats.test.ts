@@ -7,6 +7,7 @@ import { createStatsHandler, allowedStatsOrigin } from '../api/stats.ts'
 import { createStatsStore, statsPoolConfig, StatsRateLimitError } from '../server/stats-store.ts'
 import { isDownloadEvent, isStatsSnapshot } from '../src/lib/stats-contract.ts'
 import { StatsReporter, DEVICE_KEY, QUEUE_KEY } from '../src/lib/stats-reporter.ts'
+import { importHistoricalDownloads } from '../server/stats-history.ts'
 
 const event = () => ({ eventId: randomUUID(), deviceId: randomUUID() })
 const snapshot = (downloads = 0, devices = 0) => ({ downloads, devices, updatedAt: new Date().toISOString() })
@@ -117,7 +118,7 @@ test('PostgreSQL 真实事务验证并发、重复事件、设备去重和限流
   const pool = new Pool({ ...statsPoolConfig(connection), max: 5 })
   try {
     await pool.query(readFileSync(new URL('../server/stats-schema.sql', import.meta.url), 'utf8'))
-    await pool.query('TRUNCATE lightvid_stats.downloads, lightvid_stats.devices')
+    await pool.query('TRUNCATE lightvid_stats.downloads, lightvid_stats.devices, lightvid_stats.history')
     await pool.query('UPDATE lightvid_stats.totals SET downloads = 0, devices = 0 WHERE id = 1')
     const store = createStatsStore(pool)
     const same = event()
@@ -138,5 +139,16 @@ test('PostgreSQL 真实事务验证并发、重复事件、设备去重和限流
     assert.equal(before.devices, 22)
     const hashes = await pool.query('SELECT device_hash FROM lightvid_stats.devices')
     assert(hashes.rows.every(row => /^[a-f0-9]{64}$/.test(row.device_hash)))
+    // Synthetic fixtures stay in the isolated test database, never production.
+    await assert.rejects(() => importHistoricalDownloads(pool, -1, 'fixture'))
+    await assert.rejects(() => importHistoricalDownloads(pool, 100, ''))
+    const imports = await Promise.all(Array.from({ length: 5 }, () => importHistoricalDownloads(pool, 100, 'isolated historical fixture')))
+    assert.equal(imports.filter(Boolean).length, 1)
+    assert.equal((await store.read()).downloads, 133)
+    assert.equal((await store.read()).devices, 22)
+    await assert.rejects(() => importHistoricalDownloads(pool, 200, 'different record'))
+    await store.record(event())
+    assert.equal((await store.read()).downloads, 134)
+    assert.equal((await store.read()).devices, 23)
   } finally { await pool.end() }
 })

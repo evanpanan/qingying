@@ -24,4 +24,10 @@ CREATE TABLE IF NOT EXISTS lightvid_stats.downloads (
 );
 CREATE INDEX IF NOT EXISTS lightvid_stats_device_time
   ON lightvid_stats.downloads (device_hash, received_at);
+CREATE TABLE IF NOT EXISTS lightvid_stats.history (
+  id smallint PRIMARY KEY CHECK (id = 1),
+  downloads bigint NOT NULL CHECK (downloads > 0),
+  verified_source varchar(240) NOT NULL CHECK (length(trim(verified_source)) > 0),
+  imported_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);
 COMMIT;

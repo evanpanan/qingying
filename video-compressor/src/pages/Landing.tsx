@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowDown, ArrowRight, ArrowUpRight, Monitor, Maximize2, X, Volume2, VolumeX, Search, CodeXml, Heart, ShieldCheck } from 'lucide-react'
+import { ArrowDown, ArrowRight, ArrowUpRight, Monitor, Maximize2, X, Volume2, VolumeX, Search, CodeXml, ShieldCheck } from 'lucide-react'
 import DownloadTool from '../components/DownloadTool'
 import DownloadStats from '../components/DownloadStats'
 import ExperienceGallery from '../components/ExperienceGallery'
 import ParticleWordmark from '../components/ParticleWordmark'
 import HeroRibbon from '../components/HeroRibbon'
 import PlatformCarousel from '../components/PlatformCarousel'
+import FooterAppreciation from '../components/FooterAppreciation'
 import { useMotionActivity } from '../lib/motion-activity'
 import { useSurfaceMotion } from '../lib/surface-motion'
 import { FORMATS, PLATFORMS, REPRESENTATIVE_PLATFORMS, type EngineInfo } from '../lib/media'
@@ -28,6 +29,7 @@ export default function Landing({ onNavigate }: { onNavigate: (page: Page) => vo
   const [engine, setEngine] = useState<EngineInfo | null>(null)
   const [guidanceKey, setGuidanceKey] = useState(0)
   const { root: heroRef, active: heroActive } = useMotionActivity<HTMLElement>()
+  const { root: footerRef, active: footerActive } = useMotionActivity<HTMLElement>()
   const surface = useSurfaceMotion()
   const guideToLink = useCallback(() => setGuidanceKey(value => value + 1), [])
   useEffect(() => {
@@ -70,13 +72,13 @@ export default function Landing({ onNavigate }: { onNavigate: (page: Page) => vo
       {!filtered.length && <p className="muted-note">推荐列表中未收录，仍可直接粘贴该网站的作品链接尝试解析。</p>}<p className="muted-note">以上是常用平台示例，不是支持上限，也不保证每个平台的每条链接可用。仅下载公开且获授权的作品。</p>
     </section>
     <section className="secondary-tools"><div className="section-heading"><div><span className="eyebrow">AFTER THE DOWNLOAD.</span><h2>拿到视频，<em>然后呢？</em></h2></div></div><div className="secondary-grid"><button onClick={() => onNavigate('convert')}><span>02 / CONVERT</span><h3>换个格式。</h3><p>{FORMATS.map((f) => f.name).join(' · ')}</p><ArrowUpRight /></button><button onClick={() => onNavigate('compress')}><span>03 / COMPRESS</span><h3>轻一点，快一点。</h3><p>本地压缩，原视频不上传。</p><ArrowUpRight /></button></div></section>
-    {!isTauri() && <section className="desktop-section" id="desktop"><div><span className="eyebrow">ON YOUR DESKTOP.</span><h2>更大的文件，<br /><em>更从容地处理。</em></h2><p>内置自有解析、JavaScript 与转换引擎。<br />下载、转格式、压缩，一处完成。</p><a className="primary-button" href="/downloads/轻影_1.2.0_aarch64.dmg" download><Monitor size={18} />下载 macOS 版 <ArrowDown size={17} /></a><p className="muted-note">Apple Silicon · v1.2.0 · Windows 安装包尚未发布</p><details className="install-help"><summary>macOS 提示无法打开？</summary><p>将轻影拖入应用程序后，在终端运行：</p><code>xattr -cr /Applications/轻影.app</code><p>当前为开源应用的临时签名，尚未完成 Apple 公证。</p></details></div><button className="video-preview" onClick={() => setOpen(true)} aria-label="播放轻影介绍视频"><video src="/qingying-promo.mp4" autoPlay muted loop playsInline /><span><Maximize2 size={17} />看看轻影</span></button></section>}
+    {!isTauri() && <section className="desktop-section" id="desktop"><div><span className="eyebrow">ON YOUR DESKTOP.</span><h2>更大的文件，<br /><em>更从容地处理。</em></h2><p>内置自有解析、JavaScript 与转换引擎。<br />下载、转格式、压缩，一处完成。</p><a className="primary-button" href="/downloads/轻影_1.3.0_aarch64.dmg" download><Monitor size={18} />下载 macOS 版 <ArrowDown size={17} /></a><p className="muted-note">Apple Silicon · v1.3.0 · Windows 安装包由 CI 构建</p><details className="install-help"><summary>macOS 提示无法打开？</summary><p>将轻影拖入应用程序后，在终端运行：</p><code>xattr -cr /Applications/轻影.app</code><p>当前为开源应用的临时签名，尚未完成 Apple 公证。</p></details></div><button className="video-preview" onClick={() => setOpen(true)} aria-label="播放轻影介绍视频"><video src="/qingying-promo.mp4" autoPlay muted loop playsInline /><span><Maximize2 size={17} />看看轻影</span></button></section>}
     <section className="faq-section"><span className="eyebrow">A FEW THINGS TO KNOW.</span><h2>你可能想知道。</h2>{faq.map(([question, answer], index) => <div className="faq-item" key={question}><button aria-expanded={faqIndex === index} onClick={() => setFaqIndex(faqIndex === index ? null : index)}><span>{question}</span><PlusSign open={faqIndex === index} /></button>{faqIndex === index && <p className="reveal">{answer}</p>}</div>)}</section>
-    <footer className="studio-footer">
+    <footer className="studio-footer" ref={footerRef} data-motion={footerActive ? 'running' : 'paused'}>
       <div className="footer-top"><div className="footer-brand"><span className="eyebrow">A LITTLE TOOL. A LOT OF CARE.</span><ParticleWordmark /><div className="footer-tagline">轻影 / 让好内容，留在身边。</div><p>从一个真实的需要出发，<br />认真打磨每一点轻巧。</p></div>
-        <div className="footer-maker"><span className="eyebrow">MEET THE MAKER</span><a className="author-card" href="https://x.com/Yep_Cooper" target="_blank" rel="noopener noreferrer" aria-label="访问作者 Cooper 的 X（推特）主页"><span className="author-avatar"><img src="/cooper-avatar.jpg" alt="Cooper 的头像" width={52} height={52} loading="lazy" /><span /></span><span className="author-details"><strong>Cooper <span className="author-x">𝕏</span></strong><small>@Yep_Cooper</small></span><span className="author-arrow"><ArrowUpRight size={19} /></span></a><p>想法、更新，和下一点新东西。<br />都在这里，欢迎来聊聊。</p><a className="footer-source" href="https://github.com/evanpanan/qingying" target="_blank" rel="noopener noreferrer"><CodeXml size={15} />查看开源代码 <ArrowUpRight size={14} /></a></div>
+        <div className="footer-maker"><span className="eyebrow">MEET THE MAKER</span><a className="author-card" href="https://x.com/Yep_Cooper" target="_blank" rel="noopener noreferrer" aria-label="访问作者 Cooper 的 X（推特）主页"><span className="author-avatar"><img src="/cooper-avatar.jpg" alt="Cooper 的头像" width={52} height={52} loading="lazy" /><span className="author-status" aria-hidden="true" title="装饰性呼吸光点，不代表实时在线状态" /></span><span className="author-details"><strong>Cooper <span className="author-x">𝕏</span></strong><small>@Yep_Cooper</small></span><span className="author-arrow"><ArrowUpRight size={19} /></span></a><p>想法、更新，和下一点新东西。<br />都在这里，欢迎来聊聊。</p><a className="footer-source" href="https://github.com/evanpanan/qingying" target="_blank" rel="noopener noreferrer"><CodeXml size={15} />查看开源代码 <ArrowUpRight size={14} /></a></div>
       </div>
-      <div className="footer-bottom"><small>© 2026 LightVid · 仅下载你拥有或获授权的内容</small><span><Heart size={12} />用心制作，保持轻巧。</span><a href="#home" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>回到顶部 <ArrowUpRight size={13} /></a></div>
+      <div className="footer-bottom"><small>© 2026 LightVid · 仅下载你拥有或获授权的内容</small><FooterAppreciation /><a href="#home" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>回到顶部 <ArrowUpRight size={13} /></a></div>
     </footer>
     {open && <div className="media-modal" role="dialog" aria-modal="true" aria-label="轻影介绍" onClick={() => setOpen(false)}><div onClick={(e) => e.stopPropagation()}><button className="modal-close icon-button" autoFocus onClick={() => setOpen(false)} aria-label="关闭视频"><X /></button><video src="/qingying-promo.mp4" autoPlay muted={muted} loop playsInline controls /><button className="quiet-button" onClick={() => setMuted((v) => !v)}>{muted ? <VolumeX size={17} /> : <Volume2 size={17} />}{muted ? '开启声音' : '静音'}</button></div></div>}
   </main>

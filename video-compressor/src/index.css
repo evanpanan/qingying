@@ -168,3 +168,46 @@ body {
 @media (max-width: 760px) { .nav-inner { height: 76px; padding: 0 23px; gap: 14px; }.brand strong { font-size: 17px; }.brand-symbol { width: 28px; height: 28px; }.nav-desktop { display: none; }.studio-nav nav { gap: 0; }.studio-nav nav button { padding: 10px 9px; font-size: 11px; gap: 4px; }.studio-nav nav svg { display: none; }.hero-stage { grid-template-columns: 1fr; padding: 45px 24px 55px; gap: 35px; }.hero-copy { padding-top: 0; }.hero-copy h1 { font-size: 49px; margin: 18px 0 20px; }.hero-copy p { font-size: 13px; }.text-link { display: none; }.download-tool { padding: 22px; }.experience-section,.platform-section,.secondary-tools,.desktop-section,.faq-section { padding: 45px 24px; }.section-heading { margin-bottom: 25px; }.section-heading h2 { font-size: 29px; }.experience-cards { min-height: 310px; gap: 8px; }.experience-card { padding: 15px; }.experience-card.active { flex: 2.7; }.experience-card:not(.active) .card-bottom h3,.experience-card:not(.active) .card-bottom p,.experience-card:not(.active) .motion-art,.experience-card:not(.active) .card-label > span:first-child { display: none; }.experience-card:not(.active) .card-label { writing-mode: vertical-rl; font-size: 8px; }.card-label { font-size: 7px; }.card-bottom h3 { font-size: 15px; }.platform-grid { grid-template-columns: repeat(2,1fr); }.platform-grid > button { padding: 18px 13px; }.platform-search input { width: 95px; font-size: 11px; }.platform-section .section-heading { align-items: start; }.platform-section .section-heading h2 em { display: block; }.secondary-grid { gap: 10px; }.secondary-grid button { padding: 25px 19px; }.secondary-grid h3 { font-size: 23px; }.secondary-grid p { font-size: 10px; line-height: 1.8; }.secondary-grid svg { right: 16px; top: 23px; width: 16px; }.desktop-section { grid-template-columns: 1fr; gap: 35px; }.desktop-section h2 { font-size: 35px; }.studio-footer { padding: 35px 24px; align-items: start; gap: 25px; }.footer-wordmark { font-size: 29px; }.studio-footer > div:last-child { font-size: 10px; }.studio-footer small { line-height: 1.8; }.workspace-page { padding: 40px 24px 70px; }.page-intro h1 { font-size: 34px; }.conversion-layout { grid-template-columns: 1fr; margin-top: 30px; gap: 17px; }.converter-formats { grid-template-columns: repeat(5,1fr); }.studio-panel { padding: 20px; }.converter-formats button { padding: 16px 6px; }.converter-formats span { font-size: 12px; }.converter-formats small { font-size: 8px; }.legacy-tool > .page-intro { padding: 0 24px; }.media-modal { padding: 20px; } }
 @media (max-width: 380px) { .nav-inner { padding: 0 15px; }.studio-nav nav button { font-size: 10px; padding: 9px 7px; }.brand { gap: 7px; }.hero-copy h1 { font-size: 42px; }.tool-actions { gap: 12px; }.detected-platform { margin-left: 0; }.converter-formats { grid-template-columns: repeat(3,1fr); }.conversion-bottom { align-items: start; flex-direction: column; } }
 @media (prefers-reduced-motion: reduce) { .studio *, .studio *::before, .studio *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+/* dissolve:theme:start */
+/* dissolve theme: tokens used by the dissolve components. Light by default, dark follows the system.
+   Change any value here and every dissolve component follows. */
+:root {
+  --dissolve-background: rgb(255 255 255);
+  --dissolve-surface: rgb(242 242 247);
+  --dissolve-surface-2: rgb(229 229 234);
+  --dissolve-foreground: rgb(28 28 30);
+  --dissolve-muted: rgb(142 142 147);
+  --dissolve-primary: rgb(28 28 30);
+  --dissolve-primary-foreground: rgb(255 255 255);
+  --dissolve-success: rgb(52 199 89);
+  --dissolve-danger: rgb(255 59 48);
+  --dissolve-danger-foreground: rgb(255 255 255);
+  --dissolve-accent: rgb(10 132 255);
+  --dissolve-border: rgb(60 60 67 / 0.12);
+  --dissolve-chart-1: rgb(255 55 135);
+  --dissolve-chart-2: rgb(124 92 255);
+  --dissolve-chart-3: rgb(255 196 0);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --dissolve-background: rgb(0 0 0);
+    --dissolve-surface: rgb(28 28 30);
+    --dissolve-surface-2: rgb(44 44 46);
+    --dissolve-foreground: rgb(242 242 247);
+    --dissolve-muted: rgb(152 152 157);
+    --dissolve-primary: rgb(242 242 247);
+    --dissolve-primary-foreground: rgb(28 28 30);
+    --dissolve-success: rgb(48 209 88);
+    --dissolve-danger: rgb(255 69 58);
+    --dissolve-danger-foreground: rgb(255 255 255);
+    --dissolve-accent: rgb(10 132 255);
+    --dissolve-border: rgb(84 84 88 / 0.5);
+    --dissolve-chart-1: rgb(255 79 152);
+    --dissolve-chart-2: rgb(142 114 255);
+    --dissolve-chart-3: rgb(255 210 51);
+  }
+}
+
+/* dissolve:theme:end */

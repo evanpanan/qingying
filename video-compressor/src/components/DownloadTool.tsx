@@ -6,6 +6,7 @@ import { isTauri } from '../lib/env'
 import { identifyPlatform, shareUrl, type DownloadData, type DownloadFormat } from '../lib/media'
 import { downloadMedia } from '../lib/download'
 import { reportCompletedVideoDownload } from '../lib/stats'
+import { readClipboard } from '../lib/desktop'
 
 interface RecordItem { title: string; url: string; date: string }
 function loadHistory(): RecordItem[] {
@@ -158,7 +159,7 @@ export default function DownloadTool({ guidanceKey = 0 }: { guidanceKey?: number
       </div>
       <div className="tool-actions">
         <button className="primary-button" disabled={busy || saving} onClick={() => void parse()}>{busy ? <span className="signal-bars"><i /><i /><i /></span> : <ArrowDown size={18} />}{busy ? '正在解析' : '解析并下载'}</button>
-        <button className="quiet-button" disabled={busy || saving} onClick={async () => { try { setInput(await navigator.clipboard.readText()); fieldRef.current?.focus() } catch { setError('浏览器未允许读取剪贴板，请直接粘贴链接') } }}><Clipboard size={16} />粘贴</button>
+        <button className="quiet-button" disabled={busy || saving} onClick={async () => { try { setInput(await readClipboard()); fieldRef.current?.focus() } catch { setError('未允许读取剪贴板，请直接粘贴链接') } }}><Clipboard size={16} />粘贴</button>
         <span className="detected-platform">{platform?.name || '自动识别平台'}</span>
       </div>
       {error && <p className="tool-error" role="alert">{error}</p>}

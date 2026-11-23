@@ -6,6 +6,9 @@ on:
     paths:
       - video-compressor/src/**
       - video-compressor/src-tauri/**
+      - video-compressor/public/**
+      - video-compressor/src/studio-polish.css
+      - video-compressor/index.html
       - video-compressor/package*.json
       - video-compressor/scripts/ytdlp_entry.py
       - video-compressor/lightvid_engine.py
@@ -49,7 +52,7 @@ jobs:
       - run: npm run tauri:build -- --bundles nsis,msi
       - uses: actions/upload-artifact@v4
         with:
-          name: LightVid-Windows-1.2.0
+          name: LightVid-Windows-1.3.0
           path: |
             video-compressor/src-tauri/target/release/bundle/nsis/*.exe
             video-compressor/src-tauri/target/release/bundle/msi/*.msi

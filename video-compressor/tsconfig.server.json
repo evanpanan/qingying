@@ -3,5 +3,5 @@
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.server.tsbuildinfo"
   },
-  "include": ["api/stats.ts", "server/stats-store.ts"]
+  "include": ["api/stats.ts", "server/stats-store.ts", "server/stats-history.ts", "scripts/import-stats-history.ts"]
 }

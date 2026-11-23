@@ -10,6 +10,14 @@ and LightVid's branding. No React Native runtime is required.
 
 Copyright (c) Dissolve contributors
 
+## Dissolve LikeButton
+
+`src/components/dissolve/` was installed through `npx dissolve-ui add like-button --web`
+from <https://dissolve.rselmi.com/components/like-button/> (dissolve-ui 0.0.8).
+It includes the shared web engine and helpers. LightVid adapts the palette, localized
+accessible labels and reduced-motion handling for its footer easter egg.
+These files are also distributed under the following MIT license.
+
 MIT License
 
 Permission is hereby granted, free of charge, to any person obtaining a copy

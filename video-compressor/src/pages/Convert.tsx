@@ -5,13 +5,14 @@ import { pickVideoFiles, formatBytes, type CompressInput } from '../lib/compress
 import { convertVideo } from '../lib/convert'
 import { FORMATS, type OutputFormat } from '../lib/media'
 import { isTauri } from '../lib/env'
+import { useDesktopVideoDrop } from '../lib/desktop'
 
 interface Job {
   id: string; input: CompressInput; state: 'ready' | 'working' | 'done' | 'error'
   progress: number; output?: string; name?: string; size?: number; error?: string
 }
 
-export default function Converter() {
+export default function Converter({ active = true }: { active?: boolean }) {
   const [format, setFormat] = useState<OutputFormat>('mp4')
   const [jobs, setJobs] = useState<Job[]>([])
   const [busy, setBusy] = useState(false)
@@ -22,6 +23,7 @@ export default function Converter() {
   function add(inputs: CompressInput[]) {
     setJobs((old) => [...old, ...inputs.map((input) => ({ id: crypto.randomUUID(), input, state: 'ready' as const, progress: 0 }))])
   }
+  useDesktopVideoDrop(active && !busy, add)
   async function pick() {
     try { const files = await pickVideoFiles(); if (files) add(files) } catch (e) { setError((e as Error).message) }
   }
@@ -48,7 +50,7 @@ export default function Converter() {
         <div className="converter-formats">{FORMATS.map((f) => <button key={f.id} disabled={busy} className={format === f.id ? 'selected' : ''} onClick={() => setFormat(f.id)} aria-pressed={format === f.id}><span>{f.name}</span><small>{f.description}</small>{format === f.id && <Check size={16} />}</button>)}</div>
         <div className={`drop-zone ${busy ? 'disabled' : ''}`} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); if (!busy && !isTauri()) add(Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('video/') || /\.(mp4|mov|mkv|webm|avi|m4v)$/i.test(f.name)).map((f) => ({ file: f, name: f.name, size: f.size }))) }}>
           <div className="format-orbit" aria-hidden="true"><FileVideo size={30} /><ArrowRight size={18} /><span>{format.toUpperCase()}</span></div>
-          <h2>把视频放进来</h2><p>{isTauri() ? '保存到原文件目录，不覆盖源文件' : '支持拖入与批量选择 · 500 MB 内 · 本地转换'}</p>
+          <h2>把视频放进来</h2><p>{isTauri() ? '支持拖入与批量选择 · 原目录保存，不覆盖源文件' : '支持拖入与批量选择 · 500 MB 内 · 本地转换'}</p>
           <button className="primary-button" onClick={() => void pick()} disabled={busy}><Plus size={18} />选择视频</button>
         </div>
         {error && <p role="alert" className="tool-error">{error}</p>}

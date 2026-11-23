@@ -14,6 +14,7 @@ import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 import SettingsPanel from './SettingsPanel'
 import { pickVideoFiles, compressVideo, formatBytes } from '../lib/compress'
 import { isTauri } from '../lib/env'
+import { useDesktopVideoDrop } from '../lib/desktop'
 import type {
   CompressionSettings,
   CompressionResult,
@@ -35,7 +36,7 @@ interface FileState extends CompressionResult {
   input?: CompressInput
 }
 
-export default function Compressor() {
+export default function Compressor({ active = true }: { active?: boolean }) {
   const [settings, setSettings] = useState<CompressionSettings>(DEFAULT_SETTINGS)
   const [results, setResults] = useState<FileState[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
@@ -53,6 +54,7 @@ export default function Compressor() {
     })
     setResults((old) => [...old, ...items])
   }, [])
+  useDesktopVideoDrop(active && !isProcessing, addInputs)
 
   const handlePickFiles = useCallback(async () => {
     const inputs = await pickVideoFiles()

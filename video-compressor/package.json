@@ -10,10 +10,12 @@
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "test:extract": "python3 -m unittest discover -s tests -p 'test_*.py'",
     "icons:generate": "node scripts/generate-brand-icons.mjs",
+    "stats:import-history": "node --experimental-strip-types scripts/import-stats-history.ts",
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "release:macos": "bash scripts/package-macos.sh"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.10",

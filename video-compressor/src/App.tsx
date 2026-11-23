@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import StudioNav from './components/StudioNav'
 import Landing from './pages/Landing'
+import { useDesktopLinks } from './lib/desktop'
 import type { Page } from './types'
 
 const Converter = lazy(() => import('./pages/Convert'))
@@ -11,6 +12,7 @@ function currentPage(): Page {
 }
 
 function App() {
+  useDesktopLinks()
   const [page, setPage] = useState<Page>(currentPage)
   const [visited, setVisited] = useState<Set<Page>>(() => new Set([currentPage()]))
   useEffect(() => {
@@ -30,8 +32,8 @@ function App() {
       <StudioNav page={page} onNavigate={navigate} />
       <div hidden={page !== 'home' && page !== 'download'}><Landing onNavigate={navigate} /></div>
       <Suspense fallback={<div className="workspace-page"><span className="signal-bars"><i /><i /><i /></span></div>}>
-        {visited.has('convert') && <div hidden={page !== 'convert'}><Converter /></div>}
-        {visited.has('compress') && <div hidden={page !== 'compress'} className="legacy-tool"><div className="page-intro"><span className="eyebrow">03 / COMPRESS</span><h1>更轻一点，<em>分享快一点。</em></h1><p>视频留在本机，原文件保持不变。</p></div><Compressor /></div>}
+        {visited.has('convert') && <div hidden={page !== 'convert'}><Converter active={page === 'convert'} /></div>}
+        {visited.has('compress') && <div hidden={page !== 'compress'} className="legacy-tool"><div className="page-intro"><span className="eyebrow">03 / COMPRESS</span><h1>更轻一点，<em>分享快一点。</em></h1><p>视频留在本机，原文件保持不变。</p></div><Compressor active={page === 'compress'} /></div>}
       </Suspense>
     </div>
   )
