@@ -5,7 +5,6 @@ import { listen } from '@tauri-apps/api/event'
 import { isTauri } from '../lib/env'
 import { identifyPlatform, shareUrl, type DownloadData, type DownloadFormat } from '../lib/media'
 import { downloadMedia } from '../lib/download'
-import { canReportStats, reportCompletedVideoDownload } from '../lib/stats'
 import { readClipboard } from '../lib/desktop'
 import { downloadRecord, loadDownloadHistory, saveDownloadHistory, subscribeDownloadHistory } from '../lib/download-history'
 import { DownloadQueue, DOWNLOAD_CONCURRENCY, type DownloadJob } from '../lib/download-queue'
@@ -48,12 +47,8 @@ async function executeDownload(job: DownloadJob, signal: AbortSignal, onProgress
 }
 
 function rememberDownload(job: DownloadJob) {
-  const video = job.input.type === 'video'
-  const statsEventId = video && canReportStats() ? crypto.randomUUID() : undefined
-  const item = downloadRecord(job.input.title, job.input.sourceUrl, job.input.type, statsEventId)
+  const item = downloadRecord(job.input.title, job.input.sourceUrl)
   saveDownloadHistory([item, ...loadDownloadHistory().filter(i => i.url !== item.url)])
-  const eventId = statsEventId
-  if (eventId) void reportCompletedVideoDownload(eventId)
 }
 
 export default function DownloadTool({ guidanceKey = 0 }: { guidanceKey?: number }) {

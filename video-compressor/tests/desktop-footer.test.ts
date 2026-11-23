@@ -34,7 +34,6 @@ test('页脚使用 Dissolve 礼花、中文反馈和动画偏好保护', () => {
   assert.match(footer, /LikeButton/)
   assert.match(footer, /感谢您的喜欢/)
   assert.match(footer, /clearTimeout\(timer.current\)/)
-  assert.doesNotMatch(footer, /reportCompletedVideoDownload|api\/stats/)
   const core = source('src/components/dissolve/like-button.core.ts')
   assert.match(core, /if \(reducedMotion\(\)\)/)
   assert.match(core, /document.hidden/)

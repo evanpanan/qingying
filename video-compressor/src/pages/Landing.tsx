@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ArrowDown, ArrowRight, ArrowUpRight, Monitor, Maximize2, X, Volume2, VolumeX, Search, CodeXml, ShieldCheck } from 'lucide-react'
 import DownloadTool from '../components/DownloadTool'
-import DownloadStats from '../components/DownloadStats'
 import ExperienceGallery from '../components/ExperienceGallery'
 import ParticleWordmark from '../components/ParticleWordmark'
 import HeroRibbon from '../components/HeroRibbon'
@@ -19,7 +18,6 @@ const faq = [
   ['能同时下载多个视频吗？', '可以。网页下载中仍可粘贴下一条链接、解析并保存，同时下载两个任务，其余自动排队。每项有独立进度，可单独取消或失败重试。切换工具不会打断下载，刷新或关闭页面会中断未完成任务。'],
   ['能转换成哪些格式？', 'MP4、MOV、MKV、WebM 四种视频格式，以及从视频中提取 MP3 音频。转换后的文件不会覆盖源视频。'],
   ['下载失败怎么办？', '请确认链接是公开的单个作品。登录限制、地区限制、版权保护或平台风控可能阻止解析；也可以使用桌面版重试。轻影不会绕过付费权限或 DRM。'],
-  ['下载统计如何计算？', '展示总数为初始基数 1,000 加全站真实视频下载次数，基数不是已核实历史数据，不写入统计数据库。全站次数仅在视频完整接收并触发浏览器保存，或桌面下载成功后匿名计数，浏览器无法证明最终磁盘写入。约每 5 秒刷新，未连接时保留基数或上次全站值，不叠加本机记录。不自动将旧版未知媒体类型记录当作视频补报，已确认排队的事件仍会重试；固定事件标识保证不重复计数。只上报匿名事件和设备标识，不上传视频链接或标题。DNT 或 Global Privacy Control 开启时不上报，统计故障不影响下载。'],
 ]
 
 export default function Landing({ onNavigate }: { onNavigate: (page: Page) => void }) {
@@ -64,7 +62,7 @@ export default function Landing({ onNavigate }: { onNavigate: (page: Page) => vo
   return <main>
     <section className="hero-stage" ref={heroRef} data-motion={heroActive ? 'running' : 'paused'}>
       <div className="hero-copy reveal"><span className="eyebrow"><span className="tiny-orbit" />YOUR VIDEOS. WITH YOU.</span><h1>喜欢的视频，<br /><em>留在你身边。</em></h1><p>粘贴链接，保存喜欢的内容。<br />换个格式，轻一点，再出发。</p><HeroRibbon /><button className="text-link" onClick={guideToLink} aria-controls="share-link">从一个链接开始 <span><ArrowRight size={17} /></span></button><div className="hero-assurances"><span><ShieldCheck size={13} />本地转换</span><span>免费使用</span><span>开源制作</span></div></div>
-      <div className="hero-tool reveal" id="download-tool" onPointerMove={surface.onPointerMove} onPointerLeave={surface.onPointerLeave}><span className="tool-caption">A GOOD FIND DESERVES TO STAY.</span><DownloadTool guidanceKey={guidanceKey} /><DownloadStats /></div>
+      <div className="hero-tool reveal" id="download-tool" onPointerMove={surface.onPointerMove} onPointerLeave={surface.onPointerLeave}><span className="tool-caption">A GOOD FIND DESERVES TO STAY.</span><DownloadTool guidanceKey={guidanceKey} /></div>
     </section>
     <ExperienceGallery onNavigate={onNavigate} />
     <section className="platform-section" id="platforms"><div className="section-heading"><div><span className="eyebrow">ONE LINK. MANY PLACES.</span><h2>从这些地方，<em>带走灵感。</em></h2></div><div className="platform-search"><Search size={15} /><label className="sr-only" htmlFor="platform-search">搜索平台</label><input id="platform-search" placeholder="搜索平台" value={query} onChange={(e) => setQuery(e.target.value)} />{query ? <button className="icon-button" aria-label="清除平台搜索" onClick={() => setQuery('')}><X size={14} /></button> : <span className="search-hint">⌕</span>}</div></div>

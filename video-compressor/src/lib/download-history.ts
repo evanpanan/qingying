@@ -4,15 +4,11 @@ export interface DownloadRecord {
   title: string
   url: string
   date: string
-  type?: 'video' | 'audio' | 'image'
-  statsEventId?: string
-  statsReported?: boolean
-  legacyVerified?: boolean
 }
 let memory: DownloadRecord[] = []
 
-export function downloadRecord(title: string, url: string, type: NonNullable<DownloadRecord['type']>, statsEventId?: string): DownloadRecord {
-  return { title, url, type, date: new Date().toLocaleDateString('zh-CN'), ...(statsEventId ? { statsEventId } : {}) }
+export function downloadRecord(title: string, url: string): DownloadRecord {
+  return { title, url, date: new Date().toLocaleDateString('zh-CN') }
 }
 
 export function loadDownloadHistory(): DownloadRecord[] {
@@ -37,16 +33,4 @@ export function subscribeDownloadHistory(callback: () => void) {
     window.removeEventListener(HISTORY_EVENT, callback)
     window.removeEventListener('storage', storage)
   }
-}
-
-export function markDownloadReported(eventId: string) {
-  const history = loadDownloadHistory()
-  if (!history.some(item => item.statsEventId === eventId && !item.statsReported)) return
-  saveDownloadHistory(history.map(item => item.statsEventId === eventId ? { ...item, statsReported: true } : item))
-}
-
-export function unreportedLegacyRecords(history: DownloadRecord[]) {
-  return history.filter(item => !item.statsReported && (item.legacyVerified ||
-    (!item.type && /^\d{4}\/\d{1,2}\/\d{1,2}$/.test(item.date) &&
-      Date.parse(item.date) < Date.parse('2026-11-23T00:00:00'))))
 }

@@ -15,7 +15,7 @@ function apiDevServer(): Plugin {
       if (!req.url || !req.url.startsWith('/api/')) return next()
       const name = req.url.split('?')[0].slice('/api/'.length).replace(/\/+$/, '')
       if (!name) return next()
-      if (!['parse', 'proxy', 'extract', 'stats'].includes(name)) return next()
+      if (!['parse', 'proxy', 'extract'].includes(name)) return next()
       try {
         if (name === 'extract') {
           if (!['POST', 'GET'].includes(req.method || '')) {
@@ -65,7 +65,7 @@ function apiDevServer(): Plugin {
         let size = 0
         for await (const chunk of req) {
           size += chunk.length
-          if (size > (name === 'stats' ? 1024 : 16384)) {
+          if (size > 16384) {
             res.statusCode = 413
             res.end(JSON.stringify({ ok: false, error: '请求内容过长' }))
             return

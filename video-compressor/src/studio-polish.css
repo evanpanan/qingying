@@ -92,9 +92,6 @@
 .link-field:focus-within { border-color: #a8b79a; background: #f7f9f1; box-shadow: 0 0 0 3px #a6b79318, inset 0 1px 2px #3a413405; }
 .link-field:focus-within > svg { color: #6b8059; }
 .link-field[data-guided="true"] { border-color: #97ad80; }
-.download-stats { display: flex; align-items: center; justify-content: flex-start; margin: 20px 4px 0; padding-top: 15px; border-top: 1px solid #dce1d1; min-height: 48px; }
-.stats-summary { display: inline-flex; align-items: baseline; gap: 7px; margin: 0; color: #7b856e; font-size: 13px; line-height: 1.5; white-space: nowrap; }
-.stats-summary number-flow-react { color: #37432d; font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums; }
 .download-jobs { margin-top: 20px; padding-top: 16px; border-top: 1px solid #dce1d1; }
 .download-jobs-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .download-jobs-heading h3 { margin: 0; font-size: 12px; color: #46513d; }
@@ -401,9 +398,6 @@
   .download-tool { padding: 23px; border-radius: 13px; }
   .link-field textarea { font-size: 16px; }
   .tool-caption { font-size: 7px; }
-  .download-stats { margin-top: 17px; }
-  .stats-summary { gap: 5px; font-size: 12px; }
-  .stats-summary number-flow-react { font-size: 20px; }
   .download-jobs-heading { flex-wrap: wrap; }
   .download-job { padding: 10px; }
   .experience-section { padding-top: 32px; }

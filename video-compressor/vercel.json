@@ -1,8 +1,5 @@
 {
   "functions": {
-    "api/stats.ts": {
-      "maxDuration": 15
-    },
     "api/parse.ts": {
       "maxDuration": 60
     },
