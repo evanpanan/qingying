@@ -225,6 +225,15 @@ LIGHTVID_STATS_TEST_DATABASE_URL=postgresql://lightvid_test@127.0.0.1:15439/ligh
 4. 重新部署后确认 `/api/stats` 返回真实计数。不要把连接串放入 `VITE_*`、
    前端、Git 或聊天消息。本地开发可通过同名服务端环境变量连接数据库。
 
+通过 Vercel Marketplace 连接 Supabase 时，集成可能自动注入 `POSTGRES_URL`。
+在项目 Settings / Environment Variables 中确认它适用于 Production 即可，
+不需要另外添加 `LIGHTVID_STATS_DATABASE_URL`。Supabase 的 HTTPS API 地址不能替代
+PostgreSQL 连接串；若存在手动配置但无效的高优先级变量，应先移除或修正。
+建表可在 Supabase SQL Editor 执行上述 SQL，成功时显示 `Success. No rows returned`。
+新增环境变量不会改变已经运行的部署，必须 Redeploy 或推送新提交触发部署后才会读取。
+关联集成和建表成功不等于线上统计已接通，应以新部署的 `/api/stats` 返回
+`ok: true` 及真实下载事件成功写入为准。
+
 桌面 1.3.0 默认读写 `https://qingying-rosy.vercel.app/api/stats`，官网读写同站
 `/api/stats`，两者使用同一服务端统计表，不按 Web/桌面分开计数。任一端下载成功后
 更新共用总数，另一端在可见区约 5 秒内刷新；本机“最近下载”历史不是全站统计。
