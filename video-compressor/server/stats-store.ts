@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { Pool, type PoolConfig, type QueryResultRow } from 'pg'
 import { isStatsSnapshot, type DownloadEvent, type StatsSnapshot } from '../src/lib/stats-contract.js'
+import { SUPABASE_CA } from './supabase-ca.js'
 
 export class StatsUnavailableError extends Error {}
 export class StatsRateLimitError extends Error {}
@@ -41,11 +42,13 @@ export function statsPoolConfig(connectionString: string): PoolConfig {
   const url = new URL(connectionString)
   if (!['postgres:', 'postgresql:'].includes(url.protocol)) throw new StatsUnavailableError('需要 PostgreSQL 连接')
   const local = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+  const supabase = url.hostname.endsWith('.pooler.supabase.com') || /^db\.[a-z0-9]+\.supabase\.co$/i.test(url.hostname)
+  const ca = process.env.LIGHTVID_STATS_CA || (supabase ? SUPABASE_CA : undefined)
   // URL sslmode=require can override pg's certificate verification.
   for (const key of ['ssl', 'sslmode', 'sslcert', 'sslkey', 'sslrootcert']) url.searchParams.delete(key)
   return {
     connectionString: url.toString(),
-    ssl: local ? false : { rejectUnauthorized: true, ...(process.env.LIGHTVID_STATS_CA ? { ca: process.env.LIGHTVID_STATS_CA } : {}) },
+    ssl: local ? false : { rejectUnauthorized: true, ...(ca ? { ca } : {}) },
     max: 2, connectionTimeoutMillis: 4000, statement_timeout: 4000,
     query_timeout: 5000, idleTimeoutMillis: 10000, allowExitOnIdle: true,
   }

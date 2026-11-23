@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { randomUUID } from 'node:crypto'
+import { randomUUID, X509Certificate } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { Pool } from 'pg'
@@ -9,6 +9,7 @@ import { isDownloadEvent, isStatsSnapshot } from '../src/lib/stats-contract.ts'
 import { StatsReporter, DEVICE_KEY, QUEUE_KEY } from '../src/lib/stats-reporter.ts'
 import { importHistoricalDownloads } from '../server/stats-history.ts'
 import { displayedDownloadTotal, STATS_INITIAL_BASE } from '../src/lib/stats-display.ts'
+import { SUPABASE_CA } from '../server/supabase-ca.js'
 
 const event = () => ({ eventId: randomUUID(), deviceId: randomUUID() })
 const snapshot = (downloads = 0, devices = 0) => ({ downloads, devices, updatedAt: new Date().toISOString() })
@@ -84,6 +85,21 @@ test('远端 PostgreSQL 强制校验证书，本机测试连接例外', () => {
   assert.deepEqual(remote.ssl, { rejectUnauthorized: true })
   assert(!remote.connectionString?.includes('sslmode'))
   assert.equal(statsPoolConfig('postgresql://test@127.0.0.1/postgres').ssl, false)
+})
+
+test('Supabase 使用官方 CA 且保留证书验证，不扩展其他主机的信任', () => {
+  const certificate = new X509Certificate(SUPABASE_CA)
+  assert.equal(certificate.ca, true)
+  assert(certificate.subject.includes('Supabase Root 2021 CA'))
+  assert(certificate.verify(certificate.publicKey))
+  assert.equal(certificate.fingerprint256, '80:70:25:AD:50:D4:ED:21:9D:2C:9C:7D:29:9C:00:4F:82:4E:B0:0C:F7:F6:5A:FE:F6:07:D0:7B:72:E6:CA:FA')
+  assert(Date.parse(certificate.validTo) > Date.now())
+  for (const host of ['aws-1-us-east-1.pooler.supabase.com', 'db.testproject.supabase.co']) {
+    assert.deepEqual(statsPoolConfig(`postgresql://test:example@${host}:6543/postgres?sslmode=require`).ssl, { rejectUnauthorized: true, ca: SUPABASE_CA })
+  }
+  for (const host of ['db.example', 'evil-pooler.supabase.com', 'aws-1-us-east-1.pooler.supabase.com.evil.example', 'supabase.co.evil.example']) {
+    assert.deepEqual(statsPoolConfig(`postgresql://test:example@${host}/postgres`).ssl, { rejectUnauthorized: true })
+  }
 })
 
 test('离线事件保留相同 ID 重试，设备去重且不传视频信息', async () => {

@@ -10,7 +10,7 @@ test('统计 API 编译成 JavaScript 后能够启动，不再引用缺失的 .t
   try {
     writeFileSync(`${temp}/package.json`, '{"type":"module"}')
     symlinkSync(`${root}/node_modules`, `${temp}/node_modules`)
-    for (const file of ['api/stats.ts', 'server/stats-store.ts', 'src/lib/stats-contract.ts']) {
+    for (const file of ['api/stats.ts', 'server/stats-store.ts', 'server/supabase-ca.ts', 'src/lib/stats-contract.ts']) {
       const compiled = ts.transpileModule(readFileSync(`${root}/${file}`, 'utf8'), {
         compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.ESNext },
       }).outputText

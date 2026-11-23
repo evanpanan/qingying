@@ -234,6 +234,14 @@ PostgreSQL 连接串；若存在手动配置但无效的高优先级变量，应
 关联集成和建表成功不等于线上统计已接通，应以新部署的 `/api/stats` 返回
 `ok: true` 及真实下载事件成功写入为准。
 
+Supabase 数据库连接默认使用随服务端打包的公开 `Supabase Root 2021 CA`，
+解决连接池证书链不在 Node 默认信任库中导致的 `SELF_SIGNED_CERT_IN_CHAIN`。
+该 CA 仅用于 `*.pooler.supabase.com` 与 `db.<项目标识>.supabase.co`，
+不改变其他数据库或媒体请求的信任设置，证书与主机名校验保持开启。
+需要自定义或轮换 CA 时，可设置服务端 `LIGHTVID_STATS_CA` 为完整 PEM 证书。
+公开根证书不是数据库密码，服务端证书模块会随 JavaScript 编译产物部署，
+无需额外上传文件或在 Vercel 关闭 TLS 校验。
+
 桌面 1.3.0 默认读写 `https://qingying-rosy.vercel.app/api/stats`，官网读写同站
 `/api/stats`，两者使用同一服务端统计表，不按 Web/桌面分开计数。任一端下载成功后
 更新共用总数，另一端在可见区约 5 秒内刷新；本机“最近下载”历史不是全站统计。
