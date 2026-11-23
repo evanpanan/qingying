@@ -1,9 +1,13 @@
-import { useEffect, useState } from 'react'
-import { ArrowDown, ArrowUpRight, Play, Monitor, Maximize2, X, Volume2, VolumeX, Search, CodeXml, Heart, ShieldCheck } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { ArrowDown, ArrowRight, ArrowUpRight, Monitor, Maximize2, X, Volume2, VolumeX, Search, CodeXml, Heart, ShieldCheck } from 'lucide-react'
 import DownloadTool from '../components/DownloadTool'
 import ExperienceGallery from '../components/ExperienceGallery'
 import ParticleWordmark from '../components/ParticleWordmark'
-import { FORMATS, PLATFORMS, type EngineInfo } from '../lib/media'
+import HeroRibbon from '../components/HeroRibbon'
+import PlatformCarousel from '../components/PlatformCarousel'
+import { useMotionActivity } from '../lib/motion-activity'
+import { useSurfaceMotion } from '../lib/surface-motion'
+import { FORMATS, PLATFORMS, REPRESENTATIVE_PLATFORMS, type EngineInfo } from '../lib/media'
 import { invoke } from '@tauri-apps/api/core'
 import type { Page } from '../types'
 import { isTauri } from '../lib/env'
@@ -20,6 +24,12 @@ export default function Landing({ onNavigate }: { onNavigate: (page: Page) => vo
   const [query, setQuery] = useState('')
   const [faqIndex, setFaqIndex] = useState<number | null>(null)
   const [engine, setEngine] = useState<EngineInfo | null>(null)
+  const [guidanceKey, setGuidanceKey] = useState(0)
+  const [heroPlaying, setHeroPlaying] = useState(true)
+  const { root: heroRef, active: heroActive } = useMotionActivity<HTMLElement>()
+  const surface = useSurfaceMotion()
+  const guideToLink = useCallback(() => setGuidanceKey(value => value + 1), [])
+  const toggleHero = useCallback(() => setHeroPlaying(value => !value), [])
   useEffect(() => {
     const controller = new AbortController()
     let active = true
@@ -47,16 +57,16 @@ export default function Landing({ onNavigate }: { onNavigate: (page: Page) => vo
     document.addEventListener('keydown', handler)
     return () => { document.removeEventListener('keydown', handler); document.body.style.overflow = previousOverflow; document.querySelector<HTMLButtonElement>('.video-preview')?.focus() }
   }, [open])
-  const filtered = PLATFORMS.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()))
+  const filtered = PLATFORMS.filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase()))
   return <main>
-    <section className="hero-stage">
-      <div className="hero-copy reveal"><span className="eyebrow"><span className="tiny-orbit" />YOUR VIDEOS. WITH YOU.</span><h1>喜欢的视频，<br /><em>留在你身边。</em></h1><p>粘贴链接，保存喜欢的内容。<br />换个格式，轻一点，再出发。</p><a className="text-link" href="#download-tool">从一个链接开始 <span><ArrowDown size={17} /></span></a><div className="hero-assurances"><span><ShieldCheck size={13} />本地转换</span><span>免费使用</span><span>开源制作</span></div></div>
-      <div className="hero-tool reveal" id="download-tool"><span className="tool-caption">A GOOD FIND DESERVES TO STAY.</span><DownloadTool /><div className="tool-footnote"><span className="chip-dot" />下载 · 转换 · 压缩<span>一点轻巧，很多可能。</span></div></div>
+    <section className="hero-stage" ref={heroRef} data-motion={heroActive && heroPlaying ? 'running' : 'paused'}>
+      <div className="hero-copy reveal"><span className="eyebrow"><span className="tiny-orbit" />YOUR VIDEOS. WITH YOU.</span><h1>喜欢的视频，<br /><em>留在你身边。</em></h1><p>粘贴链接，保存喜欢的内容。<br />换个格式，轻一点，再出发。</p><HeroRibbon playing={heroPlaying} onToggle={toggleHero} /><button className="text-link" onClick={guideToLink} aria-controls="share-link">从一个链接开始 <span><ArrowRight size={17} /></span></button><div className="hero-assurances"><span><ShieldCheck size={13} />本地转换</span><span>免费使用</span><span>开源制作</span></div></div>
+      <div className="hero-tool reveal" id="download-tool" onPointerMove={surface.onPointerMove} onPointerLeave={surface.onPointerLeave}><span className="tool-caption">A GOOD FIND DESERVES TO STAY.</span><DownloadTool guidanceKey={guidanceKey} /><div className="tool-footnote"><span className="chip-dot" />下载 · 转换 · 压缩<span>一点轻巧，很多可能。</span></div></div>
     </section>
     <ExperienceGallery onNavigate={onNavigate} />
     <section className="platform-section" id="platforms"><div className="section-heading"><div><span className="eyebrow">ONE LINK. MANY PLACES.</span><h2>从这些地方，<em>带走灵感。</em></h2></div><div className="platform-search"><Search size={15} /><label className="sr-only" htmlFor="platform-search">搜索平台</label><input id="platform-search" placeholder="搜索平台" value={query} onChange={(e) => setQuery(e.target.value)} />{query ? <button className="icon-button" aria-label="清除平台搜索" onClick={() => setQuery('')}><X size={14} /></button> : <span className="search-hint">⌕</span>}</div></div>
       <div className="engine-capability"><span className="chip-dot" /><strong>{engine ? `${engine.extractors.toLocaleString()} 个站点解析器` : '全量站点解析器'}</strong><span>+ 通用网页探测</span><small>轻影自运行 · 不使用第三方解析{engine ? ` · v${engine.version}` : ''}</small></div>
-      <div className="platform-grid">{filtered.map((p, i) => <button key={p.name} onClick={() => { document.getElementById('share-link')?.focus(); document.getElementById('download-tool')?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }}><span className={`platform-mark mark-${i % 5}`}>{p.name === 'YouTube' ? <Play size={18} fill="currentColor" /> : p.name.slice(0, 2)}</span><span>{p.name}</span><ArrowUpRight size={16} /></button>)}</div>
+      {filtered.length > 0 && <PlatformCarousel items={query.trim() ? filtered : REPRESENTATIVE_PLATFORMS} onChoose={guideToLink} />}
       {!filtered.length && <p className="muted-note">推荐列表中未收录，仍可直接粘贴该网站的作品链接尝试解析。</p>}<p className="muted-note">以上是常用平台示例，不是支持上限，也不保证每个平台的每条链接可用。仅下载公开且获授权的作品。</p>
     </section>
     <section className="secondary-tools"><div className="section-heading"><div><span className="eyebrow">AFTER THE DOWNLOAD.</span><h2>拿到视频，<em>然后呢？</em></h2></div></div><div className="secondary-grid"><button onClick={() => onNavigate('convert')}><span>02 / CONVERT</span><h3>换个格式。</h3><p>{FORMATS.map((f) => f.name).join(' · ')}</p><ArrowUpRight /></button><button onClick={() => onNavigate('compress')}><span>03 / COMPRESS</span><h3>轻一点，快一点。</h3><p>本地压缩，原视频不上传。</p><ArrowUpRight /></button></div></section>

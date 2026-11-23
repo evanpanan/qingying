@@ -29,7 +29,7 @@ function normalizeNative(info: any, platformName: string): DownloadData {
   return { title: info.title, author: info.uploader, platformName, type: video ? 'video' : 'audio', formats, url: formats[0]?.url }
 }
 
-export default function DownloadTool() {
+export default function DownloadTool({ guidanceKey = 0 }: { guidanceKey?: number }) {
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -40,12 +40,33 @@ export default function DownloadTool() {
   const [savedPath, setSavedPath] = useState('')
   const [history, setHistory] = useState(loadHistory)
   const [showHistory, setShowHistory] = useState(false)
+  const [guided, setGuided] = useState(false)
   const requestRef = useRef<AbortController | null>(null)
   const sourceRef = useRef('')
   const fieldRef = useRef<HTMLTextAreaElement>(null)
   const platform = identifyPlatform(input)
 
   useEffect(() => () => requestRef.current?.abort(), [])
+
+  useEffect(() => {
+    const field = fieldRef.current
+    if (!guidanceKey || !field) return
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const bounds = field.getBoundingClientRect()
+    field.focus({ preventScroll: true })
+    // Only bring an offscreen field into view; the desktop CTA points right.
+    if (bounds.top < 100 || bounds.bottom > window.innerHeight - 24) {
+      field.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' })
+    }
+    setGuided(true)
+    const animation = reduced ? undefined : field.parentElement?.animate([
+      { backgroundColor: '#f7f9f1', boxShadow: '0 0 0 0 #a6b79300' },
+      { backgroundColor: '#e3edda', boxShadow: '0 0 0 6px #a6b79340', offset: 0.5 },
+      { backgroundColor: '#f7f9f1', boxShadow: '0 0 0 0 #a6b79300' },
+    ], { duration: 900, iterations: 2, easing: 'ease-in-out' })
+    const timer = window.setTimeout(() => setGuided(false), 2200)
+    return () => { animation?.cancel(); window.clearTimeout(timer) }
+  }, [guidanceKey])
 
   async function parse() {
     if (busy || saving) return
@@ -125,9 +146,10 @@ export default function DownloadTool() {
   const current = formats[selected]
   return (
     <div className="download-tool">
-      <div className="tool-topline"><span><span className={`status-dot ${busy ? 'working' : ''}`} /> {busy ? '正在寻找你的文件' : '一个链接，从这里开始'}</span><span>01 / DOWNLOAD</span></div>
+      <div className="tool-topline"><span><span className={`status-dot ${busy ? 'working' : ''}`} /> {busy ? '正在寻找你的文件' : guided ? '就在这里，粘贴你的链接' : '一个链接，从这里开始'}</span><span>01 / DOWNLOAD</span></div>
+      {guided && <span key={guidanceKey} className="sr-only" role="status">请在视频分享链接输入框中粘贴链接。</span>}
       <label className="sr-only" htmlFor="share-link">视频分享链接</label>
-      <div className={`link-field ${busy ? 'scanning' : ''}`}>
+      <div className={`link-field ${busy ? 'scanning' : ''}`} data-guided={guided ? 'true' : 'false'}>
         <Link2 size={22} />
         <textarea id="share-link" ref={fieldRef} value={input} disabled={busy || saving} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void parse() } }} placeholder="粘贴视频链接，或整段分享文案…" rows={2} />
         {input && !busy && !saving && <button className="icon-button" aria-label="清空链接" onClick={() => { setInput(''); setData(null); setError(''); fieldRef.current?.focus() }}><X size={18} /></button>}

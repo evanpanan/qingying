@@ -54,6 +54,12 @@ export const PLATFORMS = [
   { name: 'Coursera', hosts: ['coursera.org'], engine: 'extract' },
 ] as const
 
+const representativeNames = new Set([
+  'YouTube', '抖音', 'Instagram', 'Bilibili', '小红书', 'TikTok',
+  'X', '快手', 'Vimeo', '微博', 'Twitch', 'SoundCloud',
+])
+export const REPRESENTATIVE_PLATFORMS = PLATFORMS.filter(platform => representativeNames.has(platform.name))
+
 export function shareUrl(text: string): string {
   const match = text.match(/https?:\/\/[^\s"'“”‘’，。、；：）)】》>]+/i)
   if (!match) throw new Error('请粘贴包含链接的分享文案')
