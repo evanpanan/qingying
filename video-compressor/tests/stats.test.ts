@@ -8,6 +8,7 @@ import { createStatsStore, statsPoolConfig, StatsRateLimitError } from '../serve
 import { isDownloadEvent, isStatsSnapshot } from '../src/lib/stats-contract.ts'
 import { StatsReporter, DEVICE_KEY, QUEUE_KEY } from '../src/lib/stats-reporter.ts'
 import { importHistoricalDownloads } from '../server/stats-history.ts'
+import { displayedDownloadTotal, STATS_INITIAL_BASE } from '../src/lib/stats-display.ts'
 
 const event = () => ({ eventId: randomUUID(), deviceId: randomUUID() })
 const snapshot = (downloads = 0, devices = 0) => ({ downloads, devices, updatedAt: new Date().toISOString() })
@@ -131,11 +132,18 @@ test('历史补报使用固定匿名事件 ID，失败重试不新增队列项',
   assert.deepEqual(JSON.parse(values.get(QUEUE_KEY)!), [])
 })
 
-test('统计界面仅显示次数，离线时明确区分本机记录，GET 失败也重试补报', () => {
+test('统计总数披露1000初始基数，仅叠加全站次数，GET失败也重试补报', () => {
+  assert.equal(STATS_INITIAL_BASE, 1000)
+  assert.equal(displayedDownloadTotal(), 1000)
+  assert.equal(displayedDownloadTotal(0), 1000)
+  assert.equal(displayedDownloadTotal(2), 1002)
+  assert.equal(displayedDownloadTotal(135), 1135)
+  assert.equal(displayedDownloadTotal(Number.MAX_SAFE_INTEGER), Number.MAX_SAFE_INTEGER)
   const component = readFileSync(new URL('../src/components/DownloadStats.tsx', import.meta.url), 'utf8')
-  assert.doesNotMatch(component, /参与下载设备|data-devices|stats-placeholder/)
-  assert.match(component, /data\?\.downloads \?\? history.length/)
-  assert.match(component, /显示本机记录/)
+  assert.doesNotMatch(component, /参与下载设备|data-devices|stats-placeholder|本机下载记录|显示本机记录|history\.length/)
+  assert.match(component, /displayedDownloadTotal\(data\?\.downloads\)/)
+  assert.match(component, /含初始基数 1,000/)
+  assert.match(component, /data-scope="global"/)
   assert.match(component, /onErrorRetry/)
   const stats = readFileSync(new URL('../src/lib/stats.ts', import.meta.url), 'utf8')
   assert.match(stats, /fetchStats\(endpoint: string\)[\s\S]*flushStatsEvents\(\)[\s\S]*await fetch\(endpoint/)

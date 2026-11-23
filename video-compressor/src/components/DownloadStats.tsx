@@ -3,6 +3,7 @@ import NumberFlow, { useCanAnimate } from '@number-flow/react'
 import useSWR from 'swr'
 import { canReportStats, fetchStats, flushStatsEvents, reportVerifiedLegacyDownloads, STATS_ENDPOINT } from '../lib/stats'
 import { loadDownloadHistory, subscribeDownloadHistory, unreportedLegacyRecords, type DownloadRecord } from '../lib/download-history'
+import { displayedDownloadTotal, STATS_INITIAL_BASE } from '../lib/stats-display'
 
 const historySnapshot = () => JSON.stringify(loadDownloadHistory())
 const emptyHistory = () => '[]'
@@ -59,19 +60,20 @@ export default function DownloadStats() {
   }
 
   const status = data ? error ? '上次全站统计 · 正在重连' : '全站累计 · 近实时更新'
-    : error ? '全站统计待连接 · 显示本机记录' : '正在连接全站 · 显示本机记录'
-  const value = data?.downloads ?? history.length
-  return <div className="download-stats" ref={root} data-status={error ? 'unavailable' : data ? 'ready' : 'loading'} data-scope={data ? 'global' : 'local'} data-downloads={value} aria-label={data ? '全站视频下载次数' : '本机下载记录'} aria-busy={isLoading}>
+    : error ? '新增统计暂未连接' : '正在连接全站统计'
+  const value = displayedDownloadTotal(data?.downloads)
+  return <div className="download-stats" ref={root} data-status={error ? 'unavailable' : data ? 'ready' : 'loading'} data-scope="global" data-initial-base={STATS_INITIAL_BASE} data-downloads={value} aria-label="视频下载总数，含初始基数 1,000" aria-busy={isLoading}>
     <dl className="stats-metrics">
       <div>
-        <dt>{data ? '视频下载次数' : '本机下载记录'}</dt>
-        <dd><NumberFlow key={data ? 'global' : 'local'} value={value} locales="zh-CN" trend={1} animated={visible && canAnimate} transformTiming={{ duration: 650, easing: 'ease-out' }} onAnimationsStart={event => {
+        <dt>视频下载总数</dt>
+        <dd><NumberFlow value={value} locales="zh-CN" trend={1} animated={visible && canAnimate} transformTiming={{ duration: 650, easing: 'ease-out' }} onAnimationsStart={event => {
           if (canAnimate) (event.target as HTMLElement).animate([{ color: '#6d8c50' }, { color: '#37432d' }], { duration: 650 })
         }} /></dd>
       </div>
     </dl>
     <div className="stats-actions">
-      <span className="stats-status" title={data ? '全站成功视频下载，失败后以相同事件 ID 重试。统计表不保存视频链接、标题或 IP。' : '全站暂未连接，此处显示最近最多 6 条、按链接去重的本机成功下载记录，不是全站总数，也不是本机全部下载次数。'}><span className="chip-dot" />{status}</span>
+      <span className="stats-status" title="展示总数为初始基数 1,000 加全站真实视频下载次数。初始基数不是已核实历史记录，不写入统计数据库；未连接时保留基数或上次全站值。"><span className="chip-dot" />{status}</span>
+      <span className="stats-sync-note">含初始基数 1,000</span>
       {legacy.length > 0 && <button className="quiet-button stats-sync" disabled={syncing} onClick={() => void syncHistory()}>{syncing ? '正在补报…' : `同步 ${legacy.length} 条历史视频记录`}</button>}
       {syncNote && legacy.length > 0 && <span className="stats-sync-note" role="status">{syncNote}</span>}
     </div>
