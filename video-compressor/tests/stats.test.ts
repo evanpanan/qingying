@@ -109,6 +109,15 @@ test('统计上报位于视频保存完成之后，解析和独立音频等其�
   assert.match(tool, /setProgress\(100\); remember\(\)\s+if \(data\?\.type === 'video' && \(isTauri\(\) \|\| !current\?\.audioOnly\)\) void reportCompletedVideoDownload\(\)/)
 })
 
+test('桌面与官网将全站统计请求发送到同一 API', () => {
+  const stats = readFileSync(new URL('../src/lib/stats.ts', import.meta.url), 'utf8')
+  const site = 'https://qingying-rosy.vercel.app'
+  assert(stats.includes(`new URL('/api/stats', import.meta.env?.VITE_PUBLIC_SITE_URL || '${site}').href`))
+  assert.match(stats, /:\s*'\/api\/stats'/)
+  assert.equal(new URL('/api/stats', site).href, `${site}/api/stats`)
+  assert.match(stats, /fetch\(STATS_ENDPOINT/)
+})
+
 test('PostgreSQL 真实事务验证并发、重复事件、设备去重和限流回滚', {
   skip: !process.env.LIGHTVID_STATS_TEST_DATABASE_URL,
 }, async () => {
@@ -150,5 +159,22 @@ test('PostgreSQL 真实事务验证并发、重复事件、设备去重和限流
     await store.record(event())
     assert.equal((await store.read()).downloads, 134)
     assert.equal((await store.read()).devices, 23)
+    const handler = createStatsHandler(() => store)
+    const host = 'qingying-rosy.vercel.app'
+    const desktopEvent = event()
+    const saved = response()
+    await handler({ method: 'POST', headers: { origin: 'tauri://localhost', host }, body: desktopEvent }, saved)
+    assert.equal(saved.code, 200)
+    assert.equal(saved.data.data.downloads, 135)
+    assert.equal(saved.data.data.devices, 24)
+    for (const origin of [`https://${host}`, 'tauri://localhost', 'http://tauri.localhost', 'https://tauri.localhost']) {
+      const read = response()
+      await handler({ method: 'GET', headers: { origin, host } }, read)
+      assert.equal(read.code, 200)
+      assert.deepEqual(read.data.data, saved.data.data, 'Web, macOS and Windows clients must see the same database totals')
+    }
+    const retry = response()
+    await handler({ method: 'POST', headers: { origin: `https://${host}`, host }, body: desktopEvent }, retry)
+    assert.deepEqual(retry.data.data, saved.data.data, 'Retrying the same event from another client does not count twice')
   } finally { await pool.end() }
 })
