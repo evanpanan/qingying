@@ -92,17 +92,9 @@
 .link-field:focus-within { border-color: #a8b79a; background: #f7f9f1; box-shadow: 0 0 0 3px #a6b79318, inset 0 1px 2px #3a413405; }
 .link-field:focus-within > svg { color: #6b8059; }
 .link-field[data-guided="true"] { border-color: #97ad80; }
-.download-stats { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 20px 4px 0; padding-top: 15px; border-top: 1px solid #dce1d1; min-height: 68px; }
-.stats-metrics { display: flex; gap: 24px; margin: 0; min-width: 0; }
-.stats-metrics dt { font-size: 9px; color: #8a957c; }
-.stats-metrics dd { margin: 5px 0 0; color: #37432d; font-size: 23px; line-height: 1; font-variant-numeric: tabular-nums; }
-.stats-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-.stats-sync.quiet-button { font-size: 9px; padding: 4px 0; min-height: 28px; color: #687b55; }
-.stats-sync-note { color: #8c997c; font-size: 9px; }
-.stats-status { display: flex; align-items: center; gap: 6px; color: #8c997c; font-size: 8px; white-space: nowrap; }
-.download-stats[data-status="ready"] .chip-dot { animation: stats-breath 3s ease-in-out infinite; }
-.download-stats[data-status="unavailable"] .stats-status { color: #a5aa9c; }
-.download-stats[data-status="unavailable"] .chip-dot { background: #b9beb0; }
+.download-stats { display: flex; align-items: center; justify-content: flex-start; margin: 20px 4px 0; padding-top: 15px; border-top: 1px solid #dce1d1; min-height: 48px; }
+.stats-summary { display: inline-flex; align-items: baseline; gap: 7px; margin: 0; color: #7b856e; font-size: 13px; line-height: 1.5; white-space: nowrap; }
+.stats-summary number-flow-react { color: #37432d; font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums; }
 .primary-button {
   border-radius: 9px;
   background: linear-gradient(180deg, #3c4535, #293024);
@@ -362,7 +354,6 @@
 @keyframes hero-file-arrive { 0%, 100% { transform: translateY(-3px) rotate(2deg); } 50% { transform: translateY(3px) rotate(-2deg); } }
 @keyframes hero-link-flow { 0%, 100% { opacity: .2; transform: translateX(-2px) scale(.7); } 50% { opacity: 1; transform: translateX(3px) scale(1.3); } }
 @keyframes hero-tool-glow { 0%, 100% { transform: translate(-6px, -4px) scale(.95); opacity: .55; } 50% { transform: translate(8px, 6px) scale(1.04); opacity: 1; } }
-@keyframes stats-breath { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
 @keyframes author-breathe { 0%, 100% { opacity: .55; box-shadow: 0 0 0 0 #afc78c00; } 50% { opacity: 1; box-shadow: 0 0 0 4px #afc78c15, 0 0 12px #afc78c38; } }
 
 @media (max-width: 1100px) {
@@ -393,10 +384,9 @@
   .download-tool { padding: 23px; border-radius: 13px; }
   .link-field textarea { font-size: 16px; }
   .tool-caption { font-size: 7px; }
-  .download-stats { flex-wrap: wrap; gap: 13px; margin-top: 17px; }
-  .stats-metrics { gap: 18px; }
-  .stats-actions { align-items: flex-start; }
-  .stats-metrics dd { font-size: 22px; }
+  .download-stats { margin-top: 17px; }
+  .stats-summary { gap: 5px; font-size: 12px; }
+  .stats-summary number-flow-react { font-size: 20px; }
   .experience-section { padding-top: 32px; }
   .experience-section .section-heading { align-items: flex-start; gap: 12px; }
   .experience-section h2 { font-size: 27px; }
