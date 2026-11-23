@@ -98,7 +98,9 @@ npm run tauri:build -- --bundles app
 ```
 
 先下载、校验并解压 Node.js 官方独立发行版，不复制依赖本机动态库的 Homebrew Node。
-在线媒体透传最长约 280 秒，极慢源或大文件建议使用桌面版本。
+在线媒体透传每次最长约 280 秒；支持 Range 的资源按 256 KB 分段保存，
+保留 If-Range 并核对总长度，避免拼接变化或不完整的文件。
+极慢源或大文件建议使用桌面版本。
 
 Windows 安装包由仓库根目录 `.github/workflows/desktop-windows.yml` 构建，
 作为 GitHub Actions artifact 输出；未验证成功前不在官网宣称已发布。

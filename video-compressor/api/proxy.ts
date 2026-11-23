@@ -80,6 +80,7 @@ export default async function handler(req: any, res: any) {
   try {
     const headers: Record<string, string> = { 'User-Agent': UA }
     if (req.headers?.range) headers.Range = String(req.headers.range)
+    if (req.headers?.['if-range']) headers['If-Range'] = String(req.headers['if-range'])
 
     let current = await publicUrl(target)
     let upstream: IncomingMessage | undefined

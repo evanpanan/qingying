@@ -4,6 +4,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { isTauri } from '../lib/env'
 import { identifyPlatform, shareUrl, type DownloadData, type DownloadFormat } from '../lib/media'
+import { downloadMedia } from '../lib/download'
 
 interface RecordItem { title: string; url: string; date: string }
 function loadHistory(): RecordItem[] {
@@ -104,30 +105,11 @@ export default function DownloadTool() {
         let name = `${(data?.title || '轻影').replace(/[\\/:*?"<>|\n\r]/g, '_').slice(0, 60)}${index === undefined ? '' : `_${index + 1}`}.${ext.replace(/[^a-z0-9]/gi, '')}`
         const controller = new AbortController()
         requestRef.current = controller
-        const response = await fetch(`/api/proxy?url=${encodeURIComponent(url)}&download=${encodeURIComponent(name)}`, { signal: controller.signal })
-        if (!response.ok) {
-          const json = await response.json().catch(() => null)
-          throw new Error(json?.error || '文件下载失败，请重新解析获取新链接')
-        }
+        const blob = await downloadMedia(`/api/proxy?url=${encodeURIComponent(url)}`, controller.signal, setProgress)
         const imageExt: Record<string, string> = { 'image/webp': 'webp', 'image/png': 'png', 'image/jpeg': 'jpg' }
-        const actualExt = imageExt[response.headers.get('content-type')?.split(';')[0] || '']
+        const actualExt = imageExt[blob.type.split(';')[0] || '']
         if (actualExt) name = name.replace(/\.[^.]+$/, `.${actualExt}`)
-        const total = Number(response.headers.get('content-length')) || 0
-        if (total > 500 * 1024 * 1024) { controller.abort(); throw new Error('大于 500 MB 的文件请使用桌面版下载') }
-        const reader = response.body?.getReader()
-        if (!reader) throw new Error('未收到下载文件')
-        const chunks: ArrayBuffer[] = []
-        let received = 0
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          received += value.byteLength
-          if (received > 500 * 1024 * 1024) { controller.abort(); throw new Error('大文件请使用桌面版下载') }
-          chunks.push(value.slice().buffer as ArrayBuffer)
-          if (total) setProgress(Math.min(99, Math.round(received / total * 100)))
-        }
-        if (!received) throw new Error('文件为空，请重新解析')
-        const objectUrl = URL.createObjectURL(new Blob(chunks, { type: response.headers.get('content-type') || 'application/octet-stream' }))
+        const objectUrl = URL.createObjectURL(blob)
         const anchor = document.createElement('a')
         anchor.href = objectUrl; anchor.download = name
         document.body.appendChild(anchor); anchor.click(); anchor.remove()

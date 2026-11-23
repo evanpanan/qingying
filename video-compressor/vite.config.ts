@@ -110,6 +110,8 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
+    // Native build output can contain an /Applications symlink.
+    watch: { ignored: ['**/src-tauri/**'], followSymlinks: false },
   },
   preview: {
     port: 8080,

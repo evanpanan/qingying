@@ -25,6 +25,9 @@ test('网站与桌面打包共用受限网络引擎', () => {
   const deployment = JSON.parse(text('vercel.json'))
   assert.equal(deployment.functions['api/proxy.ts'].maxDuration, 300)
   assert.match(text('api/proxy.ts'), /AbortSignal\.timeout\(280000\)/)
+  assert.match(text('api/proxy.ts'), /headers\['If-Range'\]/)
+  assert.match(text('vite.config.ts'), /followSymlinks: false/)
+  assert(text('vite.config.ts').includes("ignored: ['**/src-tauri/**']"))
 })
 
 test('粒子页脚保留可访问触发方式与生命周期清理', () => {

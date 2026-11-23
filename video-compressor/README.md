@@ -129,7 +129,8 @@ chmod +x src-tauri/binaries/ffmpeg-aarch64-apple-darwin \
 该命令不负责下载 FFmpeg 和 Node；请先准备表中对应文件，
 并从 Node.js 官方下载、校验和解压匹配架构的独立发行版到上述目录。
 不要复制 Homebrew Node，它可能依赖目标电脑上不存在的 Homebrew 动态库。
-在线媒体透传最长约 280 秒，极慢源或大文件建议使用桌面版本。
+在线媒体透传每次最长约 280 秒；支持 Range 的来源按 256 KB 分段保存，
+校验完整长度与资源版本。极慢源或大文件建议使用桌面版本。
 分发时同步 `NODE_LICENSE` 到所用 Node.js 版本的完整许可证声明。
 Intel Mac 的引擎必须在匹配架构的环境中准备，现有 ARM 包不能直接用于 Intel。
 
