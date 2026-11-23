@@ -15,7 +15,7 @@ function apiDevServer(): Plugin {
       if (!req.url || !req.url.startsWith('/api/')) return next()
       const name = req.url.split('?')[0].slice('/api/'.length).replace(/\/+$/, '')
       if (!name) return next()
-      if (!['parse', 'proxy', 'extract'].includes(name)) return next()
+      if (!['parse', 'proxy', 'extract', 'stats'].includes(name)) return next()
       try {
         if (name === 'extract') {
           if (!['POST', 'GET'].includes(req.method || '')) {
@@ -61,12 +61,18 @@ function apiDevServer(): Plugin {
         const handler = mod?.default
         if (typeof handler !== 'function') return next()
 
-        const raw: Buffer = await new Promise((resolve) => {
-          const chunks: Buffer[] = []
-          req.on('data', (c: Buffer) => chunks.push(c))
-          req.on('end', () => resolve(Buffer.concat(chunks)))
-          req.on('error', () => resolve(Buffer.alloc(0)))
-        })
+        const chunks: Buffer[] = []
+        let size = 0
+        for await (const chunk of req) {
+          size += chunk.length
+          if (size > (name === 'stats' ? 1024 : 16384)) {
+            res.statusCode = 413
+            res.end(JSON.stringify({ ok: false, error: '请求内容过长' }))
+            return
+          }
+          chunks.push(Buffer.from(chunk))
+        }
+        const raw = Buffer.concat(chunks)
         req.query = Object.fromEntries(new URL(req.url, 'http://localhost').searchParams)
         req.body = raw.length ? raw.toString('utf8') : undefined
         res.status = (code: number) => {

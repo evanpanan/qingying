@@ -55,8 +55,7 @@ export const PLATFORMS = [
 ] as const
 
 const representativeNames = new Set([
-  'YouTube', '抖音', 'Instagram', 'Bilibili', '小红书', 'TikTok',
-  'X', '快手', 'Vimeo', '微博', 'Twitch', 'SoundCloud',
+  'YouTube', '抖音', 'Instagram', 'Bilibili', '小红书', 'TikTok', 'X', '快手',
 ])
 export const REPRESENTATIVE_PLATFORMS = PLATFORMS.filter(platform => representativeNames.has(platform.name))
 

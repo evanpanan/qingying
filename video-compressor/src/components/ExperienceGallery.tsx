@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef, useState, type CSSProperties } from 'react'
-import { ArrowDown, ArrowUpRight, ArrowRight, Check, FileVideo, Pause, Play, AudioLines } from 'lucide-react'
+import { ArrowDown, ArrowUpRight, ArrowRight, Check, FileVideo, Play, AudioLines } from 'lucide-react'
 import { useSurfaceMotion } from '../lib/surface-motion'
 import type { Page } from '../types'
 
@@ -55,14 +55,13 @@ function ExperienceGallery({ onNavigate }: { onNavigate: (page: Page) => void })
   const [selected, setSelected] = useState(0)
   const [hovered, setHovered] = useState<number | null>(null)
   const [focused, setFocused] = useState<number | null>(null)
-  const [playing, setPlaying] = useState(true)
   const [visible, setVisible] = useState(false)
   const [tabVisible, setTabVisible] = useState(true)
   const [reduced, setReduced] = useState(false)
   const root = useRef<HTMLElement>(null)
   const surface = useSurfaceMotion()
   const active = hovered ?? focused ?? selected
-  const running = playing && visible && tabVisible && !reduced
+  const running = visible && tabVisible && !reduced
 
   useEffect(() => {
     const node = root.current
@@ -79,14 +78,14 @@ function ExperienceGallery({ onNavigate }: { onNavigate: (page: Page) => void })
   }, [])
 
   useEffect(() => {
-    // 悬停只临时接管选中卡片，不改变用户的自动播放设置。
+    // 悬停只临时接管选中卡片，离开后自动恢复轮换。
     if (!running || hovered !== null || focused !== null) return
     const timer = window.setInterval(() => setSelected((i) => (i + 1) % scenes.length), 5600)
     return () => clearInterval(timer)
   }, [running, hovered, focused])
 
   return <section className="experience-section" ref={root} data-motion={running ? 'running' : 'paused'}>
-    <div className="section-heading"><div><span className="eyebrow">A LIGHTER WAY.</span><h2>把复杂交给工具。<br /><em>把创作留给你。</em></h2></div><button className="motion-toggle" aria-label={playing ? '暂停自动演示' : '播放自动演示'} aria-pressed={!playing} onClick={() => setPlaying((v) => !v)}>{playing ? <Pause size={13} /> : <Play size={13} />}<span>{playing ? '自动演示中' : '继续播放'}</span></button></div>
+    <div className="section-heading"><div><span className="eyebrow">A LIGHTER WAY.</span><h2>把复杂交给工具。<br /><em>把创作留给你。</em></h2></div><span className="motion-status"><span className="chip-dot" />自动演示 · 轻触互动</span></div>
     <div className="experience-cards">
       {scenes.map((scene, index) => {
         const Illustration = illustrations[index]

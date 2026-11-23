@@ -19,6 +19,7 @@
 | 格式转换 | MP4、MOV、MKV、WebM、MP3；支持批量转换、提取音频与失败重试 |
 | 视频压缩 | 4 档画质预设与原始、1080p、720p、480p 分辨率选项，支持批量处理 |
 | 本地记录 | 下载记录仅存于当前设备，切换工具时保留正在处理的任务 |
+| 全站统计 | 复用 PostgreSQL，展示真实视频下载次数与匿名设备数；未连接时不显示假数字 |
 | 交互界面 | 三组自动演示；页脚粒子文字自动聚散，悬停避让、点击散开再归位 |
 | 手机适配 | 完整展示动效卡片，支持触控和减少动态效果偏好 |
 | 网站图标 | 统一朱红播放 Logo，覆盖标签页、Safari 程序坞与手机主屏幕 |
@@ -36,13 +37,10 @@
 解析器数量不等于独立网站数量，界面通过接口读取运行版本的实际数量。
 它会随引擎升级变化，不以固定“1800”作为成功率承诺。
 
-首页展示常用平台示例，包括：
-
-YouTube、抖音、Instagram、小红书、快手、X、Bilibili、TikTok、Vimeo、
-Facebook、Reddit、Pinterest、Twitch、Dailymotion、SoundCloud、
-微博、AcFun、TED、Tumblr、Bandcamp、Streamable。
-
-还展示 ARTE、Archive.org、Bluesky、Mixcloud、Niconico 等更多示例。
+首页默认展示 YouTube、抖音、Instagram、小红书、快手、X、Bilibili、TikTok
+八个代表平台，两排连续自动流动，上排向左、下排向右，不提供装饰播放/暂停按钮。
+搜索保留完整推荐目录，包括 ARTE、Archive.org、Bluesky、Mixcloud、Niconico 等，
+最多显示前八项。
 **列表外的网站也可直接粘贴链接尝试**，列表不是支持上限。
 
 引擎覆盖不等于每条链接都可下载。仅处理公开、单个作品；登录要求、
@@ -62,6 +60,7 @@ macOS 1.2.0 安装包适用于 Apple Silicon。当前使用临时签名，**尚�
 安装后如系统提示无法打开，确认来源可信，再按官网安装说明处理。
 Windows 已配置自动构建流程，但尚未确认构建成功和安装包发布；Intel Mac 安装包未发布。
 1.2.0 包含新版 Logo、粒子页脚、自有解析引擎与内置 JavaScript runtime。
+本轮双排流动与全站统计已同步到 Web/桌面源码，尚未重新打包 1.2.0 DMG。
 历史 1.0.0/1.1.0 包不随源码更新，仍保留原有能力与限制。
 
 ## 本地开发
@@ -100,6 +99,11 @@ npm run dev
 当前官网的 Vercel **Root Directory 为 `video-compressor`**。
 必须同时部署 TypeScript/Python Functions；仅托管 `dist/` 无法提供完整下载功能。
 应用无需用户填写 API 密钥。解析逻辑由轻影自己运行，作品平台的访问条件仍不受轻影控制。
+
+全站统计需由部署者在已有 PostgreSQL / Supabase 执行统计建表 SQL，
+并配置服务端数据库连接；详见[统计配置](video-compressor/README.md#全站统计配置)。
+统计只在视频保存成功路径匿名上报，不收集视频链接或标题；设备数不是准确人数。
+数字每 5 秒近实时刷新，DNT/GPC 开启时不上报；未连接数据库显示暂不可用，下载正常使用。
 
 ## 技术与第三方
 

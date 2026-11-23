@@ -6,10 +6,10 @@ import { PLATFORMS, REPRESENTATIVE_PLATFORMS, identifyPlatform } from '../src/li
 const source = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 
 test('精选轮播只含代表平台，完整解析目录仍保留', () => {
-  assert.equal(REPRESENTATIVE_PLATFORMS.length, 12)
-  assert.equal(new Set(REPRESENTATIVE_PLATFORMS.map(platform => platform.name)).size, 12)
+  assert.equal(REPRESENTATIVE_PLATFORMS.length, 8)
+  assert.equal(new Set(REPRESENTATIVE_PLATFORMS.map(platform => platform.name)).size, 8)
   assert(PLATFORMS.length > REPRESENTATIVE_PLATFORMS.length)
-  for (const name of ['YouTube', '抖音', 'Instagram', 'Bilibili', 'TikTok', 'SoundCloud']) {
+  for (const name of ['YouTube', '抖音', 'Instagram', 'Bilibili', 'TikTok', '快手']) {
     assert(REPRESENTATIVE_PLATFORMS.some(platform => platform.name === name), name)
   }
   assert.equal(identifyPlatform('https://www.arte.tv/video/example')?.name, 'ARTE')
@@ -28,14 +28,17 @@ test('从链接开始引导到输入框，不是桌面锚点滚动', () => {
   assert.match(tool, /role="status"/)
 })
 
-test('轮播和首屏动效支持暂停、减少动画、离屏与隐藏标签', () => {
+test('两排反向自动流动，没有播放控制且尊重系统动画偏好', () => {
   const carousel = source('src/components/PlatformCarousel.tsx')
   assert.match(carousel, /embla-carousel-react/)
-  assert.match(carousel, /stopOnMouseEnter: true, stopOnFocusIn: true/)
-  assert.match(carousel, /active: running/)
+  assert.match(carousel, /embla-carousel-auto-scroll/)
+  assert.match(carousel, /direction="forward"/)
+  assert.match(carousel, /direction="backward"/)
   assert.match(carousel, /!hovered && !focused/)
   assert.match(carousel, /onFocusCapture=/)
-  assert.match(source('src/components/HeroRibbon.tsx'), /暂停首屏动效/)
+  for (const file of ['src/components/HeroRibbon.tsx', 'src/components/PlatformCarousel.tsx', 'src/components/ExperienceGallery.tsx']) {
+    assert.doesNotMatch(source(file), /暂停|播放平台轮播|motion-toggle/)
+  }
   const activity = source('src/lib/motion-activity.ts')
   for (const contract of ['IntersectionObserver', 'document.hidden', 'prefers-reduced-motion', 'observer.disconnect()', 'removeEventListener']) {
     assert(activity.includes(contract), contract)

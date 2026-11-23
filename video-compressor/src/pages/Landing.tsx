@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ArrowDown, ArrowRight, ArrowUpRight, Monitor, Maximize2, X, Volume2, VolumeX, Search, CodeXml, Heart, ShieldCheck } from 'lucide-react'
 import DownloadTool from '../components/DownloadTool'
+import DownloadStats from '../components/DownloadStats'
 import ExperienceGallery from '../components/ExperienceGallery'
 import ParticleWordmark from '../components/ParticleWordmark'
 import HeroRibbon from '../components/HeroRibbon'
@@ -16,6 +17,7 @@ const faq = [
   ['在线版与桌面版有什么不同？', '在线版无需安装，下载可直接保存的完整文件；桌面版内置下载与转换引擎，可合并音视频，适合高清和大文件。格式转换与压缩均在本机完成。'],
   ['能转换成哪些格式？', 'MP4、MOV、MKV、WebM 四种视频格式，以及从视频中提取 MP3 音频。转换后的文件不会覆盖源视频。'],
   ['下载失败怎么办？', '请确认链接是公开的单个作品。登录限制、地区限制、版权保护或平台风控可能阻止解析；也可以使用桌面版重试。轻影不会绕过付费权限或 DRM。'],
+  ['下载统计如何计算？', '仅视频完整接收并触发浏览器保存，或桌面下载成功后匿名计数，浏览器无法证明最终磁盘写入。设备指浏览器或安装实例，不是准确人数；清除本机数据会生成新标识。只上报随机事件和设备标识，不上传视频链接或标题。DNT 或 Global Privacy Control 开启时不上报。数字约每 5 秒刷新，数据库不可用时不会生成假数字，下载不受影响。'],
 ]
 
 export default function Landing({ onNavigate }: { onNavigate: (page: Page) => void }) {
@@ -25,11 +27,9 @@ export default function Landing({ onNavigate }: { onNavigate: (page: Page) => vo
   const [faqIndex, setFaqIndex] = useState<number | null>(null)
   const [engine, setEngine] = useState<EngineInfo | null>(null)
   const [guidanceKey, setGuidanceKey] = useState(0)
-  const [heroPlaying, setHeroPlaying] = useState(true)
   const { root: heroRef, active: heroActive } = useMotionActivity<HTMLElement>()
   const surface = useSurfaceMotion()
   const guideToLink = useCallback(() => setGuidanceKey(value => value + 1), [])
-  const toggleHero = useCallback(() => setHeroPlaying(value => !value), [])
   useEffect(() => {
     const controller = new AbortController()
     let active = true
@@ -59,14 +59,14 @@ export default function Landing({ onNavigate }: { onNavigate: (page: Page) => vo
   }, [open])
   const filtered = PLATFORMS.filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase()))
   return <main>
-    <section className="hero-stage" ref={heroRef} data-motion={heroActive && heroPlaying ? 'running' : 'paused'}>
-      <div className="hero-copy reveal"><span className="eyebrow"><span className="tiny-orbit" />YOUR VIDEOS. WITH YOU.</span><h1>喜欢的视频，<br /><em>留在你身边。</em></h1><p>粘贴链接，保存喜欢的内容。<br />换个格式，轻一点，再出发。</p><HeroRibbon playing={heroPlaying} onToggle={toggleHero} /><button className="text-link" onClick={guideToLink} aria-controls="share-link">从一个链接开始 <span><ArrowRight size={17} /></span></button><div className="hero-assurances"><span><ShieldCheck size={13} />本地转换</span><span>免费使用</span><span>开源制作</span></div></div>
-      <div className="hero-tool reveal" id="download-tool" onPointerMove={surface.onPointerMove} onPointerLeave={surface.onPointerLeave}><span className="tool-caption">A GOOD FIND DESERVES TO STAY.</span><DownloadTool guidanceKey={guidanceKey} /><div className="tool-footnote"><span className="chip-dot" />下载 · 转换 · 压缩<span>一点轻巧，很多可能。</span></div></div>
+    <section className="hero-stage" ref={heroRef} data-motion={heroActive ? 'running' : 'paused'}>
+      <div className="hero-copy reveal"><span className="eyebrow"><span className="tiny-orbit" />YOUR VIDEOS. WITH YOU.</span><h1>喜欢的视频，<br /><em>留在你身边。</em></h1><p>粘贴链接，保存喜欢的内容。<br />换个格式，轻一点，再出发。</p><HeroRibbon /><button className="text-link" onClick={guideToLink} aria-controls="share-link">从一个链接开始 <span><ArrowRight size={17} /></span></button><div className="hero-assurances"><span><ShieldCheck size={13} />本地转换</span><span>免费使用</span><span>开源制作</span></div></div>
+      <div className="hero-tool reveal" id="download-tool" onPointerMove={surface.onPointerMove} onPointerLeave={surface.onPointerLeave}><span className="tool-caption">A GOOD FIND DESERVES TO STAY.</span><DownloadTool guidanceKey={guidanceKey} /><DownloadStats /></div>
     </section>
     <ExperienceGallery onNavigate={onNavigate} />
     <section className="platform-section" id="platforms"><div className="section-heading"><div><span className="eyebrow">ONE LINK. MANY PLACES.</span><h2>从这些地方，<em>带走灵感。</em></h2></div><div className="platform-search"><Search size={15} /><label className="sr-only" htmlFor="platform-search">搜索平台</label><input id="platform-search" placeholder="搜索平台" value={query} onChange={(e) => setQuery(e.target.value)} />{query ? <button className="icon-button" aria-label="清除平台搜索" onClick={() => setQuery('')}><X size={14} /></button> : <span className="search-hint">⌕</span>}</div></div>
       <div className="engine-capability"><span className="chip-dot" /><strong>{engine ? `${engine.extractors.toLocaleString()} 个站点解析器` : '全量站点解析器'}</strong><span>+ 通用网页探测</span><small>轻影自运行 · 不使用第三方解析{engine ? ` · v${engine.version}` : ''}</small></div>
-      {filtered.length > 0 && <PlatformCarousel items={query.trim() ? filtered : REPRESENTATIVE_PLATFORMS} onChoose={guideToLink} />}
+      {filtered.length > 0 && <PlatformCarousel items={query.trim() ? filtered : REPRESENTATIVE_PLATFORMS} searching={!!query.trim()} onChoose={guideToLink} />}
       {!filtered.length && <p className="muted-note">推荐列表中未收录，仍可直接粘贴该网站的作品链接尝试解析。</p>}<p className="muted-note">以上是常用平台示例，不是支持上限，也不保证每个平台的每条链接可用。仅下载公开且获授权的作品。</p>
     </section>
     <section className="secondary-tools"><div className="section-heading"><div><span className="eyebrow">AFTER THE DOWNLOAD.</span><h2>拿到视频，<em>然后呢？</em></h2></div></div><div className="secondary-grid"><button onClick={() => onNavigate('convert')}><span>02 / CONVERT</span><h3>换个格式。</h3><p>{FORMATS.map((f) => f.name).join(' · ')}</p><ArrowUpRight /></button><button onClick={() => onNavigate('compress')}><span>03 / COMPRESS</span><h3>轻一点，快一点。</h3><p>本地压缩，原视频不上传。</p><ArrowUpRight /></button></div></section>

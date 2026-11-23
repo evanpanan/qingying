@@ -18,19 +18,23 @@
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.10",
     "@ffmpeg/util": "^0.12.1",
+    "@number-flow/react": "^0.6.2",
     "@tauri-apps/api": "^2.12.3",
     "@tauri-apps/plugin-clipboard-manager": "^2.4.2",
     "@tauri-apps/plugin-dialog": "^2.8.2",
     "@tauri-apps/plugin-shell": "^2.5.0",
-    "embla-carousel-autoplay": "^8.6.0",
+    "embla-carousel-auto-scroll": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "lucide-react": "^1.57.0",
+    "pg": "^8.23.1",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "swr": "^2.5.1"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.12.6",
     "@types/node": "^24.13.3",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",

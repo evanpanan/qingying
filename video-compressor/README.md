@@ -14,8 +14,13 @@
 - 共享界面：自动循环演示、悬停光影、柔和焦点、手机触控与减少动态效果支持。
 - 首屏：链接流向文件的循环动效；向右的引导按钮聚焦并轻亮链接框，
   已在视野中的输入框不会被额外滚动，也不会清空内容或自动发起下载。
-- 平台区：Embla 轮播默认展示 12 个代表平台，支持自动播放、拖动、暂停；
-  搜索仍查询完整推荐目录，展示数量不影响下载支持范围。
+- 平台区：Embla Auto Scroll 展示 8 个代表平台，桌面两排、每排四张，
+  上排向左、下排向右连续流动；支持拖动，悬停或键盘聚焦时暂时停止。
+  搜索仍查询完整推荐目录，最多显示前 8 项，不影响下载支持范围。
+- 首屏、平台区和互动演示自动运行，不提供装饰性的播放/暂停按钮；
+  离屏、隐藏标签和系统减少动态效果时停止动画。
+- 下载卡片下方展示真实全站视频下载次数和参与下载设备数，
+  使用 NumberFlow 滚动数字与 SWR 每 5 秒轮询，数据库不可用时不生成假数字。
 
 源文件转换与压缩在本机执行；作品解析与媒体下载需要联网。
 在线下载与转换限制 500 MB。已接入平台不保证每个作品可用，不支持付费权限或 DRM 绕过。
@@ -57,7 +62,7 @@ $env:LIGHTVID_PYTHON = (Resolve-Path .\.venv\Scripts\python.exe).Path
 npm run dev
 ```
 
-访问 <http://localhost:1420>。本地 Vite 中间件提供 `/api/extract`、`/api/proxy`
+访问 <http://localhost:1420>。本地 Vite 中间件提供 `/api/extract`、`/api/proxy`、`/api/stats`
 和旧入口 `/api/parse`；解析调用 Python。需要选择其他解释器时设置 `LIGHTVID_PYTHON`。
 
 ```bash
@@ -182,10 +187,48 @@ Python 测试需要已安装 `requirements.txt`。Windows 可使用
 `python -m unittest discover -s tests -p "test_*.py"`。
 准备好原生引擎后，在 `src-tauri/` 内运行 `cargo test` 检查 Rust 测试。
 
-UI 回归应覆盖默认自动播放、悬停、离开后恢复、暂停/继续、键盘焦点、
+UI 回归应覆盖默认自动播放、两排反向流动、悬停、离开后恢复、键盘焦点、
 平台搜索、作者链接、手机触控与减少动态效果。页脚粒子文字应验证自动变换、
 鼠标避让、点击和键盘散开、离屏暂停及减少动画偏好动态切换。
 交互演示中的文件大小不是实际任务进度。
+
+统计事务集成测试仅在隔离的本机 `lightvid_test` 数据库执行，且会重置该库的统计表：
+
+```bash
+LIGHTVID_STATS_TEST_DATABASE_URL=postgresql://lightvid_test@127.0.0.1:15439/lightvid_test npm test
+```
+
+不要将该测试指向生产数据库，也不要把测试计数当作历史使用量。
+
+## 全站统计配置
+
+复用已有 PostgreSQL / Supabase，不需要新增 Redis。解析与下载不依赖统计数据库。
+
+1. 在现有数据库中执行一次 [`server/stats-schema.sql`](server/stats-schema.sql)。
+   它只创建私有 `lightvid_stats` schema，不修改现有业务表。
+2. 在 Vercel 的服务端环境变量中添加 `LIGHTVID_STATS_DATABASE_URL`；
+   也兼容已有 `POSTGRES_URL` 或 `DATABASE_URL`，按此顺序读取。
+   使用执行建表的角色，或授予统计专用角色对应 schema、表和索引权限。
+3. Supabase 建议使用 IPv4 可达的 Session Pooler 连接。远端连接强制验证 TLS 证书；
+   需要专用 CA 时设置服务端 `LIGHTVID_STATS_CA`，不要关闭证书验证。
+4. 重新部署后确认 `/api/stats` 返回真实计数。不要把连接串放入 `VITE_*`、
+   前端、Git 或聊天消息。本地开发可通过同名服务端环境变量连接数据库。
+
+桌面源码使用同一线上统计接口；`VITE_PUBLIC_SITE_URL` 只用于配置公开网站域名，
+不是数据库连接。现有 macOS 1.2.0 DMG 尚未重新打包，不包含本轮双排流动与统计。
+
+仅视频完整接收并触发浏览器保存，或原生下载命令返回成功文件路径后上报；
+浏览器不能证明用户最终写入磁盘。解析、失败、图片及音频下载不计入视频统计。
+设备数按浏览器/安装实例的随机 UUID 去重，服务端仅保存设备标识的 SHA-256；
+清除本机数据或更换浏览器会产生新实例，所以不能称为准确人数。
+统计请求仅发送事件与设备 UUID，不发送视频链接、标题、用户身份或客户端时间，
+统计表不保存 IP；部署平台可能仍保留正常访问日志。
+
+DNT / Global Privacy Control 开启或本机存储被禁用时不匿名上报。
+失败事件保留原 ID 在本机最多 72 小时、100 条，下次联网或读取统计时重试。
+同一事件服务端只计一次，单设备每分钟最多 12 个新事件；这是客户端成功自报告，
+不是经过完整防作弊认证的数据。可见区域每 5 秒刷新，隐藏标签、离线或离屏时不轮询。
+数据库未配置或断连显示“统计暂不可用”，已有数字会标为上次统计；不会伪造增长或补算历史。
 
 ## Vercel 部署
 
@@ -217,6 +260,9 @@ UI 回归应覆盖默认自动播放、悬停、离开后恢复、暂停/继续�
 | `src/pages/Landing.tsx` | 当前首页、平台列表、作者页脚 |
 | `src/components/ExperienceGallery.tsx` | 自动演示与悬停、触控生命周期 |
 | `src/components/DownloadTool.tsx` | 下载交互、结果与记录 |
+| `src/components/DownloadStats.tsx` | 全站统计与数字动效 |
+| `src/lib/stats-reporter.ts` | 匿名上报、离线队列与幂等事件 |
+| `api/stats.ts`、`server/stats-store.ts` | PostgreSQL 统计读写与限流 |
 | `src/components/ParticleWordmark.tsx` | Dissolve 风格粒子页脚 |
 | `lightvid_engine.py` | 在线与桌面共用的自有解析网络传输 |
 | `src/pages/Convert.tsx` | 批量格式转换 |

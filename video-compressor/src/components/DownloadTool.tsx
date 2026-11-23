@@ -5,6 +5,7 @@ import { listen } from '@tauri-apps/api/event'
 import { isTauri } from '../lib/env'
 import { identifyPlatform, shareUrl, type DownloadData, type DownloadFormat } from '../lib/media'
 import { downloadMedia } from '../lib/download'
+import { reportCompletedVideoDownload } from '../lib/stats'
 
 interface RecordItem { title: string; url: string; date: string }
 function loadHistory(): RecordItem[] {
@@ -138,6 +139,7 @@ export default function DownloadTool({ guidanceKey = 0 }: { guidanceKey?: number
         setSavedPath(name)
       }
       setProgress(100); remember()
+      if (data?.type === 'video' && (isTauri() || !current?.audioOnly)) void reportCompletedVideoDownload()
     } catch (e) { setError((e as Error).name === 'AbortError' ? '下载已取消' : (e as Error).message) }
     finally { setSaving(false) }
   }
