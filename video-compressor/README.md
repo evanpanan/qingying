@@ -187,6 +187,10 @@ UI 回归应覆盖默认自动播放、悬停、离开后恢复、暂停/继续�
 - 构建命令：`npm run build`；静态输出目录：`dist`。
 - 同时保留 `api/*.ts`、`api/extract.py`、`lightvid_engine.py`、`requirements.txt` 和 `vercel.json`。
 - `requirements.txt` 位于应用根目录，供 Python Function 安装解析依赖。
+- Python 函数不会自动剔除项目资源。`vercel.json` 用 `excludeFiles` 排除
+  `public/`、`dist/`、`src/`、`src-tauri/`、`node_modules/` 和开发测试目录，
+  避免安装包进入函数导致 `LAMBDA_SIZE_EXCEEDED`；保留 `lightvid_engine.py`
+  和运行依赖。此设置只影响函数打包，官网安装包仍由静态托管提供。
 - 不要仅上传静态 `dist/`：这种方式无法运行完整的下载后端。
 - 解析由轻影部署的 yt-dlp 自行运行，不依赖第三方解析 API；平台访问条件仍影响成功率。
 

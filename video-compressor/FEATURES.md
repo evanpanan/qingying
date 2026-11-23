@@ -75,6 +75,8 @@
 
 Vercel 项目 Root Directory 保持 `video-compressor`。Python 依赖由根目录
 `requirements.txt` 自动安装，无需 API 密钥。不要把项目配置为仅导出静态文件。
+Python 函数通过 `vercel.json` 的 `excludeFiles` 排除静态资源、安装包、前端、
+原生构建和开发目录，保留自有解析模块与运行依赖。静态下载不受此规则影响。
 
 ```sh
 npm ci
