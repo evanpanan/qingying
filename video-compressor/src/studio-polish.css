@@ -95,6 +95,23 @@
 .download-stats { display: flex; align-items: center; justify-content: flex-start; margin: 20px 4px 0; padding-top: 15px; border-top: 1px solid #dce1d1; min-height: 48px; }
 .stats-summary { display: inline-flex; align-items: baseline; gap: 7px; margin: 0; color: #7b856e; font-size: 13px; line-height: 1.5; white-space: nowrap; }
 .stats-summary number-flow-react { color: #37432d; font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums; }
+.download-jobs { margin-top: 20px; padding-top: 16px; border-top: 1px solid #dce1d1; }
+.download-jobs-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.download-jobs-heading h3 { margin: 0; font-size: 12px; color: #46513d; }
+.download-jobs-heading h3 span { margin-left: 7px; font-size: 10px; font-weight: 400; color: #8a957d; }
+.download-jobs-heading .quiet-button, .download-job-actions .quiet-button { font-size: 10px; min-height: 32px; padding: 4px 0; }
+.download-jobs-hint { color: #8a957d; font-size: 10px; margin: 8px 0 12px; }
+.download-job-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.download-job { padding: 12px; border: 1px solid #e2e6d8; border-radius: 8px; background: #f4f6ee; min-width: 0; }
+.download-job-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.download-job-name { min-width: 0; flex: 1; }
+.download-job-name strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; color: #46513d; }
+.download-job-name small { display: block; margin-top: 4px; font-size: 10px; color: #8a957d; font-variant-numeric: tabular-nums; }
+.download-job-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; color: #687f52; }
+.download-job .job-progress { margin-top: 9px; }
+.download-job .tool-error { margin: 9px 0 0; overflow-wrap: anywhere; font-size: 11px; }
+.download-job[data-status="done"] { background: #f2f6eb; border-color: #dce6cf; }
+.download-job[data-status="error"] { background: #fbf5ee; border-color: #e8dccc; }
 .primary-button {
   border-radius: 9px;
   background: linear-gradient(180deg, #3c4535, #293024);
@@ -387,6 +404,8 @@
   .download-stats { margin-top: 17px; }
   .stats-summary { gap: 5px; font-size: 12px; }
   .stats-summary number-flow-react { font-size: 20px; }
+  .download-jobs-heading { flex-wrap: wrap; }
+  .download-job { padding: 10px; }
   .experience-section { padding-top: 32px; }
   .experience-section .section-heading { align-items: flex-start; gap: 12px; }
   .experience-section h2 { font-size: 27px; }

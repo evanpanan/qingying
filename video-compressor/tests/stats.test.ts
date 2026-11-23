@@ -139,8 +139,12 @@ test('关闭本机存储不会阻止下载或导致统计请求', async () => {
 
 test('统计上报位于视频保存完成之后，解析和独立音频等其他文件不参与', () => {
   const tool = readFileSync(new URL('../src/components/DownloadTool.tsx', import.meta.url), 'utf8')
-  assert.match(tool, /setProgress\(100\)[\s\S]*const video = data\?\.type === 'video' && \(isTauri\(\) \|\| !current\?\.audioOnly\)/)
-  assert.match(tool, /const eventId = remember\(video\)\s+if \(eventId\) void reportCompletedVideoDownload\(eventId\)/)
+  assert.match(tool, /const video = job\.input\.type === 'video'/)
+  assert.match(tool, /data\.type === 'video' && \(native \|\| !current\?\.audioOnly\)/)
+  assert.match(tool, /onCompleted: rememberDownload/)
+  assert.match(tool, /if \(eventId\) void reportCompletedVideoDownload\(eventId\)/)
+  const queue = readFileSync(new URL('../src/lib/download-queue.ts', import.meta.url), 'utf8')
+  assert.match(queue, /await this\.options\.execute[\s\S]*controller\.signal\.throwIfAborted\(\)[\s\S]*this\.options\.onCompleted\(completed\)/)
 })
 
 test('历史补报使用固定匿名事件 ID，失败重试不新增队列项', async () => {
