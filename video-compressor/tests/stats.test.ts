@@ -106,7 +106,39 @@ test('关闭本机存储不会阻止下载或导致统计请求', async () => {
 
 test('统计上报位于视频保存完成之后，解析和独立音频等其他文件不参与', () => {
   const tool = readFileSync(new URL('../src/components/DownloadTool.tsx', import.meta.url), 'utf8')
-  assert.match(tool, /setProgress\(100\); remember\(\)\s+if \(data\?\.type === 'video' && \(isTauri\(\) \|\| !current\?\.audioOnly\)\) void reportCompletedVideoDownload\(\)/)
+  assert.match(tool, /setProgress\(100\)[\s\S]*const video = data\?\.type === 'video' && \(isTauri\(\) \|\| !current\?\.audioOnly\)/)
+  assert.match(tool, /const eventId = remember\(video\)\s+if \(eventId\) void reportCompletedVideoDownload\(eventId\)/)
+})
+
+test('历史补报使用固定匿名事件 ID，失败重试不新增队列项', async () => {
+  const values = new Map<string, string>()
+  const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value) } }
+  const ids = [randomUUID(), randomUUID()]
+  const reported: string[] = []
+  let online = false, downloads = 0
+  const reporter = new StatsReporter({
+    storage, uuid: randomUUID, now: Date.now, onSnapshot: () => {},
+    onReported: id => reported.push(id),
+    request: async () => online ? { ok: true, data: snapshot(++downloads, 1) } : { ok: false },
+  })
+  await reporter.recordMany(ids)
+  await reporter.recordMany(ids)
+  assert.equal(JSON.parse(values.get(QUEUE_KEY)!).length, 2)
+  online = true
+  await reporter.flush()
+  assert.deepEqual(reported, ids)
+  assert.equal(downloads, 2)
+  assert.deepEqual(JSON.parse(values.get(QUEUE_KEY)!), [])
+})
+
+test('统计界面仅显示次数，离线时明确区分本机记录，GET 失败也重试补报', () => {
+  const component = readFileSync(new URL('../src/components/DownloadStats.tsx', import.meta.url), 'utf8')
+  assert.doesNotMatch(component, /参与下载设备|data-devices|stats-placeholder/)
+  assert.match(component, /data\?\.downloads \?\? history.length/)
+  assert.match(component, /显示本机记录/)
+  assert.match(component, /onErrorRetry/)
+  const stats = readFileSync(new URL('../src/lib/stats.ts', import.meta.url), 'utf8')
+  assert.match(stats, /fetchStats\(endpoint: string\)[\s\S]*flushStatsEvents\(\)[\s\S]*await fetch\(endpoint/)
 })
 
 test('桌面与官网将全站统计请求发送到同一 API', () => {

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { Pool, type PoolConfig, type QueryResultRow } from 'pg'
-import { isStatsSnapshot, type DownloadEvent, type StatsSnapshot } from '../src/lib/stats-contract.ts'
+import { isStatsSnapshot, type DownloadEvent, type StatsSnapshot } from '../src/lib/stats-contract.js'
 
 export class StatsUnavailableError extends Error {}
 export class StatsRateLimitError extends Error {}

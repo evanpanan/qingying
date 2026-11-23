@@ -5,19 +5,9 @@ import { listen } from '@tauri-apps/api/event'
 import { isTauri } from '../lib/env'
 import { identifyPlatform, shareUrl, type DownloadData, type DownloadFormat } from '../lib/media'
 import { downloadMedia } from '../lib/download'
-import { reportCompletedVideoDownload } from '../lib/stats'
+import { canReportStats, reportCompletedVideoDownload } from '../lib/stats'
 import { readClipboard } from '../lib/desktop'
-
-interface RecordItem { title: string; url: string; date: string }
-function loadHistory(): RecordItem[] {
-  try {
-    const items = JSON.parse(localStorage.getItem('lightvid.downloads.v1') || '[]')
-    return Array.isArray(items) ? items.filter((i) => typeof i?.title === 'string' && typeof i?.url === 'string').slice(0, 6) : []
-  } catch { return [] }
-}
-function historyItem(title: string, url: string): RecordItem {
-  return { title, url, date: new Date().toLocaleDateString('zh-CN') }
-}
+import { downloadRecord, loadDownloadHistory, saveDownloadHistory, subscribeDownloadHistory } from '../lib/download-history'
 
 function normalizeNative(info: any, platformName: string): DownloadData {
   if (!info || ['playlist', 'multi_video'].includes(info._type)) throw new Error('请使用单个作品链接')
@@ -40,7 +30,7 @@ export default function DownloadTool({ guidanceKey = 0 }: { guidanceKey?: number
   const [saving, setSaving] = useState(false)
   const [progress, setProgress] = useState<number | null>(null)
   const [savedPath, setSavedPath] = useState('')
-  const [history, setHistory] = useState(loadHistory)
+  const [history, setHistory] = useState(loadDownloadHistory)
   const [showHistory, setShowHistory] = useState(false)
   const [guided, setGuided] = useState(false)
   const requestRef = useRef<AbortController | null>(null)
@@ -49,6 +39,7 @@ export default function DownloadTool({ guidanceKey = 0 }: { guidanceKey?: number
   const platform = identifyPlatform(input)
 
   useEffect(() => () => requestRef.current?.abort(), [])
+  useEffect(() => subscribeDownloadHistory(() => setHistory(loadDownloadHistory())), [])
 
   useEffect(() => {
     const field = fieldRef.current
@@ -103,11 +94,12 @@ export default function DownloadTool({ guidanceKey = 0 }: { guidanceKey?: number
     } finally { clearTimeout(timeout); setBusy(false) }
   }
 
-  function remember() {
-    const item = historyItem(data?.title || '视频', sourceRef.current)
-    const next = [item, ...history.filter((i) => i.url !== item.url)].slice(0, 6)
-    setHistory(next)
-    try { localStorage.setItem('lightvid.downloads.v1', JSON.stringify(next)) } catch { /* 存储关闭不影响下载。 */ }
+  function remember(video: boolean) {
+    const statsEventId = video && canReportStats() ? crypto.randomUUID() : undefined
+    const type = video ? 'video' : data?.type === 'image' ? 'image' : 'audio'
+    const item = downloadRecord(data?.title || '视频', sourceRef.current, type, statsEventId)
+    saveDownloadHistory([item, ...loadDownloadHistory().filter(i => i.url !== item.url)])
+    return statsEventId
   }
 
   async function save(url?: string, ext = 'mp4', index?: number) {
@@ -139,8 +131,10 @@ export default function DownloadTool({ guidanceKey = 0 }: { guidanceKey?: number
         window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60000)
         setSavedPath(name)
       }
-      setProgress(100); remember()
-      if (data?.type === 'video' && (isTauri() || !current?.audioOnly)) void reportCompletedVideoDownload()
+      setProgress(100)
+      const video = data?.type === 'video' && (isTauri() || !current?.audioOnly)
+      const eventId = remember(video)
+      if (eventId) void reportCompletedVideoDownload(eventId)
     } catch (e) { setError((e as Error).name === 'AbortError' ? '下载已取消' : (e as Error).message) }
     finally { setSaving(false) }
   }
@@ -174,7 +168,7 @@ export default function DownloadTool({ guidanceKey = 0 }: { guidanceKey?: number
         {savedPath && !saving && <div className="success-note"><Check size={17} />文件已保存{isTauri() && <button className="quiet-button" onClick={() => void invoke('reveal_in_finder', { path: savedPath }).catch(() => setError('无法打开文件目录'))}><FolderOpen size={16} />打开目录</button>}</div>}
       </div>}
       <div className="history-strip"><button className="quiet-button" onClick={() => setShowHistory((v) => !v)} aria-expanded={showHistory}><History size={16} />最近下载<span>{history.length}</span></button><span>仅保存在本机</span></div>
-      {showHistory && <div className="download-history">{history.length ? history.map((item) => <button key={item.url} disabled={busy || saving} onClick={() => { setInput(item.url); setData(null); setError(''); fieldRef.current?.focus() }}><span>{item.title}</span><small>{item.date}</small><ArrowUpRight size={16} /></button>) : <p>还没有记录，保存第一个视频后会出现在这里。</p>}{history.length > 0 && <button className="quiet-button" onClick={() => { setHistory([]); localStorage.removeItem('lightvid.downloads.v1') }}>清除记录</button>}</div>}
+      {showHistory && <div className="download-history">{history.length ? history.map((item) => <button key={item.url} disabled={busy || saving} onClick={() => { setInput(item.url); setData(null); setError(''); fieldRef.current?.focus() }}><span>{item.title}</span><small>{item.date}</small><ArrowUpRight size={16} /></button>) : <p>还没有记录，保存第一个视频后会出现在这里。</p>}{history.length > 0 && <button className="quiet-button" onClick={() => saveDownloadHistory([])}>清除记录</button>}</div>}
     </div>
   )
 }

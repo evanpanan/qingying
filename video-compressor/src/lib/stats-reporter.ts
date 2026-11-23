@@ -7,6 +7,7 @@ interface ReporterOptions {
   storage: Pick<Storage, 'getItem' | 'setItem'>
   request: (event: DownloadEvent) => Promise<{ ok: boolean; data?: unknown }>
   onSnapshot: (snapshot: StatsSnapshot) => void
+  onReported?: (eventId: string) => void
   uuid: () => string
   now: () => number
 }
@@ -26,15 +27,25 @@ export class StatsReporter {
     } catch { return [] }
   }
 
-  async record() {
+  async record(eventId = this.options.uuid()) {
+    return this.recordMany([eventId])
+  }
+
+  async recordMany(eventIds: string[]) {
     try {
       let deviceId = this.options.storage.getItem(DEVICE_KEY)
       if (!isAnonymousId(deviceId)) {
         deviceId = this.options.uuid()
         this.options.storage.setItem(DEVICE_KEY, deviceId)
       }
-      const event: PendingEvent = { deviceId, eventId: this.options.uuid(), queuedAt: this.options.now() }
-      this.options.storage.setItem(QUEUE_KEY, JSON.stringify([...this.pending(), event].slice(-100)))
+      const pending = this.pending()
+      const known = new Set(pending.map(item => item.eventId))
+      for (const eventId of eventIds) {
+        if (!isAnonymousId(eventId) || known.has(eventId)) continue
+        known.add(eventId)
+        pending.push({ deviceId, eventId, queuedAt: this.options.now() })
+      }
+      this.options.storage.setItem(QUEUE_KEY, JSON.stringify(pending.slice(-100)))
       await this.flush()
     } catch { /* Blocked storage or reporting must never turn a successful download into an error. */ }
   }
@@ -53,6 +64,7 @@ export class StatsReporter {
       const result = await this.options.request({ eventId: event.eventId, deviceId: event.deviceId })
       if (!result.ok || !isStatsSnapshot(result.data)) return
       this.options.storage.setItem(QUEUE_KEY, JSON.stringify(this.pending().filter(item => item.eventId !== event.eventId)))
+      this.options.onReported?.(event.eventId)
       this.options.onSnapshot(result.data)
     }
   }

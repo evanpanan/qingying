@@ -1,5 +1,5 @@
-import { getStatsStore, StatsRateLimitError } from '../server/stats-store.ts'
-import { isDownloadEvent, type DownloadEvent, type StatsSnapshot } from '../src/lib/stats-contract.ts'
+import { getStatsStore, StatsRateLimitError } from '../server/stats-store.js'
+import { isDownloadEvent, type DownloadEvent, type StatsSnapshot } from '../src/lib/stats-contract.js'
 
 interface StatsStore {
   read(): Promise<StatsSnapshot>
