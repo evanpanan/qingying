@@ -132,7 +132,33 @@ test('历史补报使用固定匿名事件 ID，失败重试不新增队列项',
   assert.deepEqual(JSON.parse(values.get(QUEUE_KEY)!), [])
 })
 
-test('统计总数披露1000初始基数，仅叠加全站次数，GET失败也重试补报', () => {
+test('失败下载超过72小时和100条仍保留，重新打开后使用原事件ID补报', async () => {
+  const values = new Map<string, string>()
+  const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value) } }
+  const ids = Array.from({ length: 101 }, () => randomUUID())
+  let now = 1000, online = false
+  const sent: string[] = []
+  const options = {
+    storage, uuid: randomUUID, now: () => now, onSnapshot: () => {},
+    request: async (body: { eventId: string }) => {
+      if (!online) return { ok: false }
+      sent.push(body.eventId)
+      return { ok: true, data: snapshot(sent.length, 1) }
+    },
+  }
+  const first = new StatsReporter(options)
+  assert.equal(await first.recordMany(ids), true)
+  assert.equal(JSON.parse(values.get(QUEUE_KEY)!).length, 101)
+  now += 8 * 24 * 60 * 60 * 1000
+  const reopened = new StatsReporter(options)
+  assert.equal(reopened.hasPending(), true)
+  online = true
+  await reopened.flush()
+  assert.deepEqual(sent, ids)
+  assert.equal(reopened.hasPending(), false)
+})
+
+test('统计总数仅叠加全站次数，基数说明移入FAQ，GET失败仍重试补报', () => {
   assert.equal(STATS_INITIAL_BASE, 1000)
   assert.equal(displayedDownloadTotal(), 1000)
   assert.equal(displayedDownloadTotal(0), 1000)
@@ -142,11 +168,15 @@ test('统计总数披露1000初始基数，仅叠加全站次数，GET失败也�
   const component = readFileSync(new URL('../src/components/DownloadStats.tsx', import.meta.url), 'utf8')
   assert.doesNotMatch(component, /参与下载设备|data-devices|stats-placeholder|本机下载记录|显示本机记录|history\.length/)
   assert.match(component, /displayedDownloadTotal\(data\?\.downloads\)/)
-  assert.match(component, /含初始基数 1,000/)
+  assert.doesNotMatch(component, /<span[^>]*>含初始基数/)
+  const landing = readFileSync(new URL('../src/pages/Landing.tsx', import.meta.url), 'utf8')
+  assert.match(landing, /基数不是已核实历史数据，不写入统计数据库/)
   assert.match(component, /data-scope="global"/)
   assert.match(component, /onErrorRetry/)
   const stats = readFileSync(new URL('../src/lib/stats.ts', import.meta.url), 'utf8')
   assert.match(stats, /fetchStats\(endpoint: string\)[\s\S]*flushStatsEvents\(\)[\s\S]*await fetch\(endpoint/)
+  assert.match(stats, /hasPending\(\)/)
+  assert.match(stats, /visibilitychange/)
 })
 
 test('桌面与官网将全站统计请求发送到同一 API', () => {

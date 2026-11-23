@@ -16,8 +16,24 @@ function acceptSnapshot(snapshot: StatsSnapshot) {
 }
 
 let reporter: StatsReporter | undefined
+let retryTimer: ReturnType<typeof setTimeout> | undefined
+let listeningForRecovery = false
 export function canReportStats() {
   return navigator.doNotTrack !== '1' && !(navigator as Navigator & { globalPrivacyControl?: boolean }).globalPrivacyControl
+}
+
+function scheduleStatsRetry() {
+  clearTimeout(retryTimer)
+  retryTimer = undefined
+  if (!reporter?.hasPending() || !canReportStats() || document.hidden || navigator.onLine === false) return
+  // Pending saves retry even when the statistics card is outside the viewport.
+  retryTimer = setTimeout(() => { void flushStatsEvents() }, 5000)
+}
+
+function resumeStatsReporting() {
+  clearTimeout(retryTimer)
+  retryTimer = undefined
+  if (!document.hidden && navigator.onLine !== false) void flushStatsEvents()
 }
 
 function getReporter() {
@@ -36,15 +52,27 @@ function getReporter() {
     onSnapshot: snapshot => { void mutate(STATS_ENDPOINT, acceptSnapshot(snapshot), { revalidate: false }) },
     onReported: markDownloadReported,
   })
+  if (!listeningForRecovery) {
+    listeningForRecovery = true
+    window.addEventListener('online', resumeStatsReporting)
+    window.addEventListener('offline', resumeStatsReporting)
+    document.addEventListener('visibilitychange', resumeStatsReporting)
+  }
   return reporter
 }
 
 export async function reportCompletedVideoDownload(eventId?: string) {
   try { await getReporter()?.record(eventId) } catch { /* Anonymous statistics are optional. */ }
+  finally { scheduleStatsRetry() }
 }
 
 export async function flushStatsEvents() {
-  try { await getReporter()?.flush() } catch { /* Offline reporting never blocks the tool. */ }
+  try {
+    const current = getReporter()
+    if (document.hidden || navigator.onLine === false) return
+    await current?.flush()
+  } catch { /* Offline reporting never blocks the tool. */ }
+  finally { scheduleStatsRetry() }
 }
 
 export async function fetchStats(endpoint: string) {
@@ -71,7 +99,7 @@ export async function reportVerifiedLegacyDownloads() {
       return { ...item, type: 'video' as const, legacyVerified: true, statsEventId }
     })
     saveDownloadHistory(updated)
-    await reporter.recordMany(ids)
-    return true
+    return await reporter.recordMany(ids)
   } catch { return false }
+  finally { scheduleStatsRetry() }
 }

@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import StudioNav from './components/StudioNav'
 import Landing from './pages/Landing'
 import { useDesktopLinks } from './lib/desktop'
+import { flushStatsEvents } from './lib/stats'
 import type { Page } from './types'
 
 const Converter = lazy(() => import('./pages/Convert'))
@@ -15,6 +16,7 @@ function App() {
   useDesktopLinks()
   const [page, setPage] = useState<Page>(currentPage)
   const [visited, setVisited] = useState<Set<Page>>(() => new Set([currentPage()]))
+  useEffect(() => { void flushStatsEvents() }, [])
   useEffect(() => {
     const handle = () => { const next = currentPage(); setPage(next); setVisited((old) => new Set([...old, next])) }
     window.addEventListener('hashchange', handle)

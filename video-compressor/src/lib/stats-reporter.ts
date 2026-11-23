@@ -23,8 +23,12 @@ export class StatsReporter {
       if (!Array.isArray(data)) return []
       return data.filter((item): item is PendingEvent => item && isAnonymousId(item.eventId) &&
         isAnonymousId(item.deviceId) && Number.isFinite(item.queuedAt) &&
-        this.options.now() - item.queuedAt >= 0 && this.options.now() - item.queuedAt <= 72 * 60 * 60 * 1000).slice(-100)
+        item.queuedAt >= 0)
     } catch { return [] }
+  }
+
+  hasPending() {
+    return this.pending().length > 0
   }
 
   async record(eventId = this.options.uuid()) {
@@ -45,9 +49,14 @@ export class StatsReporter {
         known.add(eventId)
         pending.push({ deviceId, eventId, queuedAt: this.options.now() })
       }
-      this.options.storage.setItem(QUEUE_KEY, JSON.stringify(pending.slice(-100)))
+      // Keep failed saves until acknowledged instead of dropping them by age or count.
+      this.options.storage.setItem(QUEUE_KEY, JSON.stringify(pending))
       await this.flush()
-    } catch { /* Blocked storage or reporting must never turn a successful download into an error. */ }
+      return true
+    } catch {
+      // Blocked storage or reporting must not turn a completed download into an error.
+      return false
+    }
   }
 
   flush(): Promise<void> {

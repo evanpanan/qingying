@@ -73,7 +73,6 @@ export default function DownloadStats() {
     </dl>
     <div className="stats-actions">
       <span className="stats-status" title="展示总数为初始基数 1,000 加全站真实视频下载次数。初始基数不是已核实历史记录，不写入统计数据库；未连接时保留基数或上次全站值。"><span className="chip-dot" />{status}</span>
-      <span className="stats-sync-note">含初始基数 1,000</span>
       {legacy.length > 0 && <button className="quiet-button stats-sync" disabled={syncing} onClick={() => void syncHistory()}>{syncing ? '正在补报…' : `同步 ${legacy.length} 条历史视频记录`}</button>}
       {syncNote && legacy.length > 0 && <span className="stats-sync-note" role="status">{syncNote}</span>}
     </div>
