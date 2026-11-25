@@ -10,6 +10,10 @@ export const config = { maxDuration: 300 }
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36'
 
+/** 抖音 CDN 校验来源，缺少 Referer 时图片会 403。 */
+const DOUYIN_HOST = /(^|\.)(douyinpic|douyinvod|douyin|iesdouyin)\.com$/
+const DOUYIN_REFERER = 'https://www.douyin.com/'
+
 const PASS_HEADERS = [
   'content-type',
   'content-length',
@@ -86,7 +90,10 @@ export default async function handler(req: any, res: any) {
     let upstream: IncomingMessage | undefined
     const signal = AbortSignal.timeout(280000)
     for (let hop = 0; hop < 6; hop++) {
-      upstream = await openPublic(current, headers, signal)
+      const hopHeaders = DOUYIN_HOST.test(current.url.hostname)
+        ? { ...headers, Referer: DOUYIN_REFERER }
+        : headers
+      upstream = await openPublic(current, hopHeaders, signal)
       if (![301, 302, 303, 307, 308].includes(upstream.statusCode || 0)) break
       const location = upstream.headers.location
       upstream.destroy()

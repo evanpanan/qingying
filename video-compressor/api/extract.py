@@ -7,6 +7,7 @@ from pathlib import Path
 # Also works when invoked directly by Vite and frozen into the desktop engine.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from lightvid_engine import LightVidDL, engine_info, validate_url
+from lightvid_douyin import douyin_extract, is_douyin
 
 
 def error_message(error):
@@ -25,6 +26,9 @@ def error_message(error):
 
 def extract(url):
     host = validate_url(url, entry=True)
+    if is_douyin(host):
+        # 抖音网页接口需要签名风控，这里走轻影自己的抖音解析。
+        return douyin_extract(url)
     options = {
         "quiet": True, "no_warnings": True, "noplaylist": True,
         "socket_timeout": 12, "retries": 1, "extractor_retries": 1,

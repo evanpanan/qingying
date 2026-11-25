@@ -87,6 +87,8 @@ LIGHTVID_PYTHON=/path/to/python3 npm run dev
 保留 TLS 域名验证，不使用系统代理或不受限的备用传输。
 在线解析有请求数量与时长预算，只有直接媒体可在浏览器保存；
 分离音视频与分片流需要桌面引擎处理。没有绕过 DRM、登录或付费限制。
+抖音网页接口启用签名风控后由 `lightvid_douyin.py` 单独解析公开作品
+（视频多档画质与图集原图），仍不使用任何第三方解析站；桌面版原生解析未改动。
 
 `npm run preview` 仅预览静态构建，不挂载本地解析函数，
 不能替代完整的下载功能开发服务器。
@@ -242,6 +244,7 @@ UI 回归应覆盖默认自动播放、两排反向流动、悬停、离开后�
 | `src/components/DownloadTool.tsx` | 下载交互、结果与记录 |
 | `src/components/ParticleWordmark.tsx` | Dissolve 风格粒子页脚 |
 | `lightvid_engine.py` | 在线与桌面共用的自有解析网络传输 |
+| `lightvid_douyin.py` | 抖音自有解析（公开作品接口、多档画质与图集） |
 | `src/pages/Convert.tsx` | 批量格式转换 |
 | `src/lib/media.ts` | 平台目录、格式配置与结果类型 |
 | `src/lib/ffmpeg.wasm.ts` | 浏览器串行编码队列 |

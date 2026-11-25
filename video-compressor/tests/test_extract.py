@@ -56,6 +56,15 @@ class ExtractTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             module.extract("https://youtube.com/playlist?list=x")
 
+    def test_douyin_uses_own_signed_parser(self):
+        with patch.object(module, "LightVidDL") as downloader:
+            with patch.object(module, "douyin_extract",
+                              return_value={"platformName": "抖音", "type": "video"}) as douyin:
+                result = module.extract("https://v.douyin.com/CbU9vClGu9U/")
+        self.assertEqual(result["platformName"], "抖音")
+        douyin.assert_called_once_with("https://v.douyin.com/CbU9vClGu9U/")
+        downloader.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

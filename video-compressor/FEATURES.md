@@ -63,6 +63,9 @@
 在线版：
 
 - 所有平台由轻影自己的 Vercel Python Function `api/extract.py` 与 yt-dlp 解析。
+- 抖音网页接口启用签名风控后，改由 `lightvid_douyin.py` 读取公开 `aweme/detail`
+  作品数据（视频多档画质与图集原图），请求仍走 `lightvid_engine.py` 的同一受限传输；
+  桌面版原生解析仍基于内置 yt-dlp，抖音可能受同一风控影响。
 - 在线与桌面共同使用 `lightvid_engine.py` 的受限网络传输。
 - 网络请求限制为公开 HTTP(S)，仅使用 IPv4 DNS，检查全部返回地址并固定到校验后的 IP，
   包括提取器子请求与重定向；不回退到其他传输、系统代理、文件或 FTP。
