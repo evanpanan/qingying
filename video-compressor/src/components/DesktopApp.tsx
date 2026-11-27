@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { listen } from '@tauri-apps/api/event'
-import { Download, ArrowLeftRight, Minimize2, PanelLeft, Film, Keyboard } from 'lucide-react'
+import { Download, ArrowLeftRight, Minimize2, PanelLeft, Keyboard } from 'lucide-react'
 import DownloadTool from './DownloadTool'
 import { useDesktopLinks } from '../lib/desktop'
 import '../desktop.css'
@@ -46,9 +46,9 @@ export default function DesktopApp() {
     return () => window.removeEventListener('keydown', keydown)
   }, [])
   const current = tools.find(tool => tool.id === page)!
-  return <div className="desktop-app" data-sidebar={sidebar}>
+  return <div className="studio desktop-app" data-sidebar={sidebar}>
     <aside className="desktop-sidebar" aria-label="工具侧边栏">
-      <div className="desktop-brand"><Film size={25} /><strong>轻影<span>媒体工作台</span></strong></div>
+      <div className="desktop-brand"><span className="brand-symbol"><svg viewBox="0 0 48 48" width="35" height="35" aria-hidden="true"><use href="/lightvid.svg?v=2#brand-mark" /></svg></span><strong>轻影<span>LIGHTVID</span></strong></div>
       <div className="desktop-sidebar-label">工具</div>
       <nav aria-label="媒体工具">{tools.map((tool, index) => <button key={tool.id} aria-current={page === tool.id ? 'page' : undefined} onClick={() => navigate(tool.id)}><tool.icon size={18} /><span>{tool.name}</span><kbd>⌘{index + 1}</kbd></button>)}</nav>
       <div className="desktop-sidebar-bottom"><span className="status-dot" /> 本机处理<p>转换与压缩在本机完成<br />原文件保持不变</p></div>
@@ -59,7 +59,7 @@ export default function DesktopApp() {
         <section hidden={page !== 'download'} aria-label="视频下载工作区"><div className="desktop-section-heading"><h2>新建下载</h2><span>粘贴分享链接或整段文案 · ⌘L</span></div><DownloadTool guidanceKey={guidance} /></section>
         <Suspense fallback={<p role="status">正在打开工具…</p>}>
           {visited.has('convert') && <section hidden={page !== 'convert'} aria-label="格式转换工作区"><Convert active={page === 'convert'} /></section>}
-          {visited.has('compress') && <section hidden={page !== 'compress'} aria-label="视频压缩工作区"><div className="desktop-compressor"><Compress active={page === 'compress'} /></div></section>}
+          {visited.has('compress') && <section hidden={page !== 'compress'} aria-label="视频压缩工作区"><div className="desktop-compressor legacy-tool"><Compress active={page === 'compress'} /></div></section>}
         </Suspense>
       </div>
       <footer className="desktop-statusbar"><span>轻影 · 媒体工作台</span><span>切换工具可继续处理任务</span></footer>
