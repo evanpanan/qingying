@@ -1,0 +1,82 @@
+name: Release macOS Desktop
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/macos-workspace]
+    paths:
+      - .github/workflows/desktop-macos.yml
+      - video-compressor/src-tauri/Cargo.toml
+permissions:
+  contents: write
+concurrency:
+  group: macos-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: video-compressor
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: video-compressor/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: video-compressor/src-tauri -> target
+      - name: Restore shipped portable engines
+        run: |
+          test "$(uname -m)" = arm64
+          mount="$RUNNER_TEMP/lightvid-old"
+          mkdir -p "$mount" src-tauri/binaries
+          hdiutil attach public/downloads/轻影_1.3.1_aarch64.dmg -mountpoint "$mount" -nobrowse -readonly
+          trap 'hdiutil detach "$mount"' EXIT
+          for engine in ffmpeg yt-dlp node; do
+            source="$mount/轻影.app/Contents/MacOS/$engine"
+            test -f "$source"
+            cp "$source" "src-tauri/binaries/$engine-aarch64-apple-darwin"
+            chmod +x "src-tauri/binaries/$engine-aarch64-apple-darwin"
+          done
+          src-tauri/binaries/ffmpeg-aarch64-apple-darwin -version
+          src-tauri/binaries/node-aarch64-apple-darwin --version
+          src-tauri/binaries/yt-dlp-aarch64-apple-darwin --lightvid-info
+      - run: npm ci
+      - run: npm run lint -- src
+      - run: npm test
+      - run: cargo test --manifest-path src-tauri/Cargo.toml
+      - name: Build and sign installer
+        run: npm run release:macos
+      - name: Verify bundled engines, launch and media processing
+        run: |
+          app="src-tauri/target/release/bundle/macos/轻影.app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          for engine in ffmpeg yt-dlp node; do
+            test -x "$app/Contents/MacOS/$engine"
+            if otool -L "$app/Contents/MacOS/$engine" | grep -E '/opt/homebrew|/usr/local/'; then
+              echo "Non-portable dependency in $engine"; exit 1
+            fi
+          done
+          "$app/Contents/MacOS/ffmpeg" -y -f lavfi -i color=c=black:s=160x120:d=1 -c:v libx264 "$RUNNER_TEMP/input.mp4"
+          "$app/Contents/MacOS/ffmpeg" -y -i "$RUNNER_TEMP/input.mp4" -c:v libx264 -crf 30 "$RUNNER_TEMP/output.mov"
+          test -s "$RUNNER_TEMP/output.mov"
+          open "$app"
+          sleep 8
+          pgrep -x lightvid
+          screencapture -x "$RUNNER_TEMP/desktop-launch.png"
+          pkill -x lightvid
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LightVid-macOS-1.4.0
+          path: |
+            video-compressor/public/downloads/轻影_1.4.0_aarch64.dmg
+            ${{ runner.temp }}/desktop-launch.png
+      - name: Publish verified installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create v1.4.0 public/downloads/轻影_1.4.0_aarch64.dmg --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title '轻影 1.4.0 · macOS 工作台' --notes '更新日期：2026-11-27。独立侧边栏、下载/转换/压缩工作区、系统工具菜单和快捷键；保留网页的纸感配色与品牌风格。适用于 Apple Silicon。临时签名，未 Apple 公证。'
