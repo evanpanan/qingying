@@ -1,7 +1,11 @@
 {
   "name": "lightvid-desktop-ai",
   "private": true,
-  "version": "1.5.1",
+  "version": "1.6.0",
   "type": "module",
-  "dependencies": { "onnxruntime-node": "1.23.2" }
+  "dependencies": {
+    "@huggingface/transformers": "^3.8.1",
+    "kokoro-js": "^1.2.1",
+    "onnxruntime-node": "1.23.2"
+  }
 }

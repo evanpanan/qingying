@@ -10,5 +10,6 @@
       "maxDuration": 60,
       "excludeFiles": "{public/**,dist/**,src/**,src-tauri/**,node_modules/**,.venv/**,tests/**,scripts/**,**/__pycache__/**}"
     }
-  }
+  },
+  "installCommand": "ONNXRUNTIME_NODE_INSTALL_CUDA=skip npm ci"
 }

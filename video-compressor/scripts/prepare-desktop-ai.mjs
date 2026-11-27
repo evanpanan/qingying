@@ -5,14 +5,25 @@ import {fileURLToPath} from 'node:url'
 import {dirname,resolve} from 'node:path'
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),runtime=resolve(root,'desktop-ai'),target=resolve(runtime,'models/lama_fp32.onnx')
 if(!process.env.TAURI_ENV_PLATFORM&&!process.argv.includes('--force'))process.exit(0)
-try{await access(resolve(runtime,'node_modules/onnxruntime-node/package.json'))}catch{
- const result=spawnSync(process.platform==='win32'?'npm.cmd':'npm',['ci','--omit=dev','--no-audit','--no-fund'],{cwd:runtime,stdio:'inherit',shell:process.platform==='win32'})
+try{await access(resolve(runtime,'node_modules/onnxruntime-node/package.json'));await access(resolve(runtime,'node_modules/kokoro-js/package.json'));await access(resolve(runtime,'node_modules/@huggingface/transformers/package.json'))}catch{
+ const result=spawnSync(process.platform==='win32'?'npm.cmd':'npm',['ci','--omit=dev','--no-audit','--no-fund'],{cwd:runtime,stdio:'inherit',shell:process.platform==='win32',env:{...process.env,ONNXRUNTIME_NODE_INSTALL_CUDA:'skip'}})
  if(result.status!==0)throw new Error('无法安装桌面 AI 引擎')
 }
-// Keep only the current platform's native library in the installer.
-const binaries=resolve(runtime,'node_modules/onnxruntime-node/bin/napi-v6')
-for(const platform of await readdir(binaries))if(platform!==process.platform)await rm(resolve(binaries,platform),{recursive:true,force:true})
-for(const arch of await readdir(resolve(binaries,process.platform)))if(arch!==process.arch)await rm(resolve(binaries,process.platform,arch),{recursive:true,force:true})
+// Keep only current-platform native libraries, including nested speech runtimes.
+async function prune(directory){
+ for(const item of await readdir(directory,{withFileTypes:true})){
+  if(!item.isDirectory())continue
+  const path=resolve(directory,item.name)
+  if(item.name==='onnxruntime-node'){
+   for(const abi of await readdir(resolve(path,'bin'))){const bins=resolve(path,'bin',abi);for(const platform of await readdir(bins))if(platform!==process.platform)await rm(resolve(bins,platform),{recursive:true,force:true});for(const arch of await readdir(resolve(bins,process.platform)))if(arch!==process.arch)await rm(resolve(bins,process.platform,arch),{recursive:true,force:true})}
+  }
+  if(item.name.startsWith('@')||item.name==='node_modules')await prune(path)
+  else {try{await access(resolve(path,'node_modules'));await prune(resolve(path,'node_modules'))}catch{}}
+ }
+}
+await prune(resolve(runtime,'node_modules'))
+const voices=resolve(runtime,'node_modules/kokoro-js/voices')
+for(const name of await readdir(voices))if(!['af_heart.bin','am_michael.bin'].includes(name))await rm(resolve(voices,name),{force:true})
 const hash='1faef5301d78db7dda502fe59966957ec4b79dd64e16f03ed96913c7a4eb68d6',valid=bytes=>createHash('sha256').update(bytes).digest('hex')===hash
 try{if(valid(await readFile(target)))process.exit(0)}catch{}
 await mkdir(dirname(target),{recursive:true})

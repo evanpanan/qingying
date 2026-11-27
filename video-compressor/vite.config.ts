@@ -110,6 +110,12 @@ function desktopAssets(): Plugin {
 }
 
 
+function speechRuntime(): Plugin {
+ const root=resolve('node_modules/onnxruntime-web/dist')
+ const allowed=(name:string)=>/^ort-wasm-simd-threaded(?:\.jsep)?\.(?:mjs|wasm)$/.test(name)
+ return {name:'lightvid-speech-runtime',configureServer(server){server.middlewares.use('/speech-runtime',(req,res,next)=>{const name=(req.url||'').split('?')[0].replace(/^\//,'');if(!allowed(name))return next();res.setHeader('Content-Type',name.endsWith('.wasm')?'application/wasm':'text/javascript');createReadStream(resolve(root,name)).on('error',()=>{res.statusCode=404;res.end()}).pipe(res)})},closeBundle(){mkdirSync(resolve('dist/speech-runtime'),{recursive:true});for(const name of readdirSync(root).filter(allowed))copyFileSync(resolve(root,name),resolve('dist/speech-runtime',name))}}
+}
+
 function localVideoEngine(): Plugin {
   const roots: Record<string, string> = {
     '/ffmpeg-core': resolve('node_modules/@ffmpeg/core/dist/esm'),
@@ -137,7 +143,8 @@ function localVideoEngine(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), apiDevServer(), desktopAssets(),  localVideoEngine()],
+  worker: {format: 'es'},
+  plugins: [react(), speechRuntime(), apiDevServer(), desktopAssets(),  localVideoEngine()],
   // Tauri expects the dev server on port 1420
   server: {
     port: 1420,

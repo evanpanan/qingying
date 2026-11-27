@@ -70,6 +70,7 @@ jobs:
           test -s "$app/Contents/Resources/desktop-ai/models/lama_fp32.onnx"
           "$app/Contents/MacOS/node" -e 'const ort=require(process.argv[1]); console.log(ort.listSupportedBackends())' "$app/Contents/Resources/desktop-ai/node_modules/onnxruntime-node"
           LIGHTVID_APP="$app" node scripts/test-desktop-ai.mjs
+          LIGHTVID_APP="$app" node scripts/test-desktop-translation.mjs
           open "$app"
           sleep 8
           pgrep -x lightvid
@@ -77,12 +78,12 @@ jobs:
           pkill -x lightvid
       - uses: actions/upload-artifact@v4
         with:
-          name: LightVid-macOS-1.5.1
+          name: LightVid-macOS-1.6.0
           path: |
-            video-compressor/public/downloads/轻影_1.5.1_aarch64.dmg
+            video-compressor/public/downloads/轻影_1.6.0_aarch64.dmg
             ${{ runner.temp }}/desktop-launch.png
       - name: Publish verified installer
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.5.1 public/downloads/轻影_1.5.1_aarch64.dmg --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title '轻影 1.5.1 · 选区缩放与工具排序' --notes '更新日期：2026-11-27。选择框新增八方向缩放手柄；画面修复移至第二位，快捷键调整为 ⌘2；保留内置离线 AI、多选区及原音频。适用于 Apple Silicon。临时签名，未 Apple 公证。'
+          gh release create v1.6.0 public/downloads/轻影_1.6.0_aarch64.dmg --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title '轻影 1.6.0 · 本机视频翻译与修复历史' --notes '更新日期：2026-11-27。新增免费本机中文语音转英文配音和英文字幕，可叠加多选区修补；翻译模型首次自动下载约 350 MB，无需 API。处理结果自动保存历史，支持直接打开视频、所在文件夹和另存。添加修补选区按钮更醒目。翻译每次最多 60 秒、200 MB，叠加 AI 修复最多 20 秒；英文配音替换原音轨，机器翻译需检查。适用于 Apple Silicon。临时签名，未 Apple 公证。'

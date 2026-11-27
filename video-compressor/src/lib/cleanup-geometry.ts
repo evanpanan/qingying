@@ -3,7 +3,7 @@ export const MAX_REPAIR_REGIONS = 8
 export function validRegions(regions: RepairRegion[]) {
   return regions.length > 0 && regions.length <= MAX_REPAIR_REGIONS && regions.every(validRegion)
 }
-export type CleanupMode = 'quick' | 'ai' | 'subtitle-track'
+export type CleanupMode = 'quick' | 'ai' | 'subtitle-track' | 'translate'
 export const SUBTITLE_REGION: RepairRegion = { x: .08, y: .76, width: .84, height: .15 }
 export const WATERMARK_REGION: RepairRegion = { x: .76, y: .04, width: .2, height: .13 }
 export function validRegion(r: RepairRegion) {

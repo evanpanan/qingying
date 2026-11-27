@@ -1,6 +1,7 @@
 import {invoke} from '@tauri-apps/api/core'
 import {listen} from '@tauri-apps/api/event'
 import {save} from '@tauri-apps/plugin-dialog'
+import type {TranslateOptions} from './translation'
 import type {CleanupMode,RepairRegion} from './cleanup-geometry'
 export class DesktopRepair {
   private file:File|null=null
@@ -14,14 +15,14 @@ export class DesktopRepair {
       signal.throwIfAborted();this.file=file;return job
     }catch(error){this.dispose();throw error}
   }
-  async run(file:File,mode:CleanupMode,regions:RepairRegion[],width:number,height:number,start:number,end:number,time:number,preview:boolean,onProgress:(value:number,text:string)=>void,signal:AbortSignal){
+  async run(file:File,mode:CleanupMode,regions:RepairRegion[],width:number,height:number,start:number,end:number,time:number,preview:boolean,onProgress:(value:number,text:string)=>void,signal:AbortSignal,translation?:TranslateOptions){
     const job=await this.prepare(file,signal,onProgress)
     const off=await listen<{job:string;progress:number;text:string}>('repair-progress',event=>{if(event.payload.job===job)onProgress(event.payload.progress,event.payload.text)})
     const stop=()=>{void invoke('repair_cancel',{job}).catch(()=>{})}
     signal.addEventListener('abort',stop,{once:true})
     try{
       signal.throwIfAborted()
-      await invoke('repair_run',{job,spec:{mode,regions,width,height,start,end,time,preview}})
+      await invoke('repair_run',{job,spec:{title:file.name,mode,regions,width,height,start,end,time,preview,...translation}})
       signal.throwIfAborted()
       if(preview){const bytes=await invoke<number[]>('repair_preview',{job});return new Blob([new Uint8Array(bytes)],{type:'image/png'})}
       return job
@@ -30,7 +31,7 @@ export class DesktopRepair {
   async save(job:string,name:string){
     const destination=await save({defaultPath:name,filters:[{name:'MP4 视频',extensions:['mp4']}]})
     if(!destination)return false
-    await invoke('repair_save',{job,destination});return true
+    await invoke('library_save',{id:job,destination});return true
   }
   dispose(){
     const job=this.job;this.job=null;this.file=null

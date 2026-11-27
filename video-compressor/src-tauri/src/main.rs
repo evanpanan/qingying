@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod repair;
+mod library;
 
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader};
@@ -600,7 +601,7 @@ pub fn run() {
         .manage(repair::Jobs::default())
         .setup(|app| {
             // Only per-process temporary repair copies; saved originals/results are elsewhere.
-            if let Ok(cache) = app.path().app_cache_dir() { let _ = std::fs::remove_dir_all(cache.join("repair")); }
+            library::migrate_legacy(app.handle());
             Ok(())
         })
         .menu(|app| {
@@ -627,6 +628,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .invoke_handler(tauri::generate_handler![
+            library::library_list, library::library_action, library::library_save,
             repair::repair_begin, repair::repair_upload, repair::repair_run, repair::repair_cancel, repair::repair_preview, repair::repair_save, repair::repair_discard,
             compress_video,
             convert_video,
