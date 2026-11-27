@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { ArrowDown, ArrowUpRight, Check, Clipboard, Link2, X, FolderOpen, History, RotateCcw } from 'lucide-react'
+import { ArrowDown, ArrowUpRight, Check, Clipboard, Link2, X, FolderOpen, History, RotateCcw, Clock3, Play, ChevronUp } from 'lucide-react'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { isTauri } from '../lib/env'
 import { identifyPlatform, shareUrl, type DownloadData, type DownloadFormat } from '../lib/media'
+import { formatElapsed } from '../lib/download-timing'
 import { downloadMedia } from '../lib/download'
 import { readClipboard } from '../lib/desktop'
 import { downloadRecord, loadDownloadHistory, saveDownloadHistory, subscribeDownloadHistory } from '../lib/download-history'
@@ -47,7 +48,7 @@ async function executeDownload(job: DownloadJob, signal: AbortSignal, onProgress
 }
 
 function rememberDownload(job: DownloadJob) {
-  const item = downloadRecord(job.input.title, job.input.sourceUrl)
+  const item = downloadRecord(job.input.title, job.input.sourceUrl, job.timing)
   saveDownloadHistory([item, ...loadDownloadHistory().filter(i => i.url !== item.url)])
 }
 
@@ -56,6 +57,10 @@ export default function DownloadTool({ guidanceKey = 0 }: { guidanceKey?: number
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [data, setData] = useState<DownloadData | null>(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [parseMs, setParseMs] = useState<number | null>(null)
+  const [clock, setClock] = useState(0)
+  const [parseStarted, setParseStarted] = useState(0)
   const [selected, setSelected] = useState(0)
   const [queue] = useState(() => new DownloadQueue({ execute: executeDownload, onCompleted: rememberDownload }))
   const jobs = useSyncExternalStore(queue.subscribe, queue.getSnapshot, queue.getSnapshot)
@@ -66,6 +71,12 @@ export default function DownloadTool({ guidanceKey = 0 }: { guidanceKey?: number
   const [sourceUrl, setSourceUrl] = useState('')
   const fieldRef = useRef<HTMLTextAreaElement>(null)
   const platform = identifyPlatform(input)
+  const ticking = busy || jobs.some(job => job.status === 'downloading' || job.status === 'queued')
+  useEffect(() => {
+    if (!ticking) return
+    const timer = window.setInterval(() => setClock(performance.now()), 200)
+    return () => window.clearInterval(timer)
+  }, [ticking])
 
   useEffect(() => () => { requestRef.current?.abort(); queue.cancelAll() }, [queue])
   useEffect(() => subscribeDownloadHistory(() => setHistory(loadDownloadHistory())), [])
@@ -93,8 +104,15 @@ export default function DownloadTool({ guidanceKey = 0 }: { guidanceKey?: number
   async function parse() {
     if (busy) return
     setError('')
+    setParseMs(null)
     let url: string
     try { url = shareUrl(input) } catch (e) { setError((e as Error).message); return }
+    const startedAt = performance.now()
+    setParseStarted(startedAt)
+    setClock(startedAt)
+    setParseMs(null)
+    setPreviewOpen(false)
+    if (fieldRef.current) fieldRef.current.scrollTop = 0
     setBusy(true)
     setData(null)
     setSelected(0)
@@ -119,14 +137,14 @@ export default function DownloadTool({ guidanceKey = 0 }: { guidanceKey?: number
       setData(result)
     } catch (e) {
       setError((e as Error).name === 'AbortError' ? '解析超时，请稍后重试或使用桌面版' : (e as Error).message)
-    } finally { clearTimeout(timeout); setBusy(false) }
+    } finally { clearTimeout(timeout); setParseMs(performance.now() - startedAt); setBusy(false) }
   }
 
   function save(url?: string, ext = 'mp4', index?: number) {
     if (!data) return
     const native = isTauri()
     const type = data.type === 'image' ? 'image' : data.type === 'video' && (native || !current?.audioOnly) ? 'video' : 'audio'
-    queue.enqueue({ sourceUrl, title: data.title || '视频', type, mediaUrl: url, ext, index, native })
+    queue.enqueue({ sourceUrl, title: data.title || '视频', type, mediaUrl: url, ext, index, native, parseMs: parseMs ?? undefined })
   }
 
   const formats = data?.formats?.length ? data.formats : data?.url ? [{ id: 'original', label: '原文件', url: data.url, ext: data.type === 'audio' ? 'm4a' : 'mp4' }] : []
@@ -142,38 +160,44 @@ export default function DownloadTool({ guidanceKey = 0 }: { guidanceKey?: number
       <div className={`link-field ${busy ? 'scanning' : ''}`} data-guided={guided ? 'true' : 'false'}>
         <Link2 size={22} />
         <textarea id="share-link" ref={fieldRef} value={input} disabled={busy} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void parse() } }} placeholder="粘贴视频链接，或整段分享文案…" rows={2} />
-        {input && !busy && <button className="icon-button" aria-label="清空链接" onClick={() => { setInput(''); setData(null); setError(''); fieldRef.current?.focus() }}><X size={18} /></button>}
+        {input && !busy && <button className="icon-button" aria-label="清空链接" onClick={() => { setInput(''); setData(null); setError(''); setParseMs(null); setPreviewOpen(false); fieldRef.current?.focus() }}><X size={18} /></button>}
       </div>
       <div className="tool-actions">
         <button className="primary-button" disabled={busy} onClick={() => void parse()}>{busy ? <span className="signal-bars"><i /><i /><i /></span> : <ArrowDown size={18} />}{busy ? '正在解析' : '解析并下载'}</button>
         <button className="quiet-button" disabled={busy} onClick={async () => { try { setInput(await readClipboard()); fieldRef.current?.focus() } catch { setError('未允许读取剪贴板，请直接粘贴链接') } }}><Clipboard size={16} />粘贴</button>
         <span className="detected-platform">{platform?.name || '自动识别平台'}</span>
       </div>
+      {(busy || parseMs !== null) && <p className="parse-timing" role="status"><Clock3 size={13} />{busy ? '解析中' : error ? '本次解析用时' : '解析完成'} · {formatElapsed(busy ? Math.max(0, clock - parseStarted) : parseMs ?? 0)}</p>}
       {error && <p className="tool-error" role="alert">{error}</p>}
       {data && <div className="download-result reveal">
-        <div className="result-heading"><span className="eyebrow">{data.platformName} / {data.type === 'image' ? 'IMAGE' : 'MEDIA'}</span><h3>{data.title || '你的文件已就绪'}</h3>{data.author && <p>{data.author}</p>}</div>
+        <div className="result-heading"><span className="eyebrow">{data.platformName} / {data.type === 'image' ? 'IMAGE' : 'MEDIA'}</span><h3 title={data.title}>{data.title || '你的文件已就绪'}</h3>{data.author && <p>{data.author}</p>}</div>
         {data.type === 'image' ? <div className="image-results">{data.images?.map((image, index) => <button key={`${index}-${image.url}`} onClick={() => save(image.url, 'jpg', index)} disabled={jobs.some(job => job.input.sourceUrl === sourceUrl && job.input.index === index && ['queued', 'downloading'].includes(job.status))}><img alt={`图片 ${index + 1}`} src={`/api/proxy?url=${encodeURIComponent(image.url)}`} loading="lazy" /><span><ArrowDown size={15} />保存 {index + 1}</span></button>)}</div> : <>
           {!isTauri() && formats.length > 1 && <div className="format-choices">{formats.map((f, index) => <button key={f.id} className={index === selected ? 'selected' : ''} onClick={() => setSelected(index)}>{f.label}</button>)}</div>}
-          {!isTauri() && current && (current.audioOnly || data.type === 'audio' ? <audio controls src={`/api/proxy?url=${encodeURIComponent(current.url)}`} /> : <video key={current.id} controls playsInline preload="none" src={`/api/proxy?url=${encodeURIComponent(current.url)}`} />)}
+          <div className="result-actions">
+          {!isTauri() && current && <button className="quiet-button preview-toggle" aria-expanded={previewOpen} aria-controls="download-preview" onClick={() => setPreviewOpen(value => !value)}>{previewOpen ? <ChevronUp size={16} /> : <Play size={16} />}{previewOpen ? '收起预览' : data.type === 'audio' || current.audioOnly ? '试听音频' : '预览视频'}</button>}
           <button className="primary-button" disabled={Boolean(currentJob)} onClick={() => save(current?.url, current?.ext)}><ArrowDown size={18} />{currentJob ? currentJob.status === 'queued' ? '已加入下载队列' : `下载中${currentJob.progress !== null ? ` ${currentJob.progress}%` : ''}` : isTauri() ? data.type === 'audio' ? '保存音频' : '保存完整视频 · 最高 1080p' : `保存 ${current?.label || '文件'}`}</button>
+          </div>
+          {!isTauri() && current && previewOpen && <div className="result-media" id="download-preview">{current.audioOnly || data.type === 'audio' ? <audio controls src={`/api/proxy?url=${encodeURIComponent(current.url)}`} /> : <video key={current.id} controls playsInline preload="metadata" src={`/api/proxy?url=${encodeURIComponent(current.url)}`} />}</div>}
         </>}
       </div>}
       {jobs.length > 0 && <section className="download-jobs" aria-label="下载任务">
         <div className="download-jobs-heading"><h3>下载任务 <span>{running} 个下载中{waiting > 0 ? ` · ${waiting} 个等待中` : ''}</span></h3>{jobs.some(job => !['queued', 'downloading'].includes(job.status)) && <button className="quiet-button" onClick={() => queue.clearFinished()}>清理已结束</button>}</div>
-        <p className="download-jobs-hint">可继续粘贴新链接 · 同时下载 {DOWNLOAD_CONCURRENCY} 个，其余自动排队</p>
-        <ol className="download-job-list">{jobs.map(job => <li className="download-job" key={job.id} data-job-id={job.id} data-status={job.status}>
+        <p className="download-jobs-hint">同时下载 {DOWNLOAD_CONCURRENCY} 个，其余排队 · 合计不含预览、操作等待</p>
+        <ol className="download-job-list">{[...jobs].reverse().map(job => <li className="download-job" key={job.id} data-job-id={job.id} data-status={job.status}>
           <div className="download-job-top"><div className="download-job-name"><strong title={job.input.title}>{job.input.title}{job.input.index === undefined ? '' : ` · 图片 ${job.input.index + 1}`}</strong><small>{job.input.ext.toUpperCase()} · {job.status === 'queued' ? '等待下载' : job.status === 'downloading' ? `下载中${job.progress === null ? '' : ` ${job.progress}%`}` : job.status === 'done' ? '文件已保存' : job.status === 'cancelled' ? '已取消' : '下载失败'}</small></div><div className="download-job-actions">
             {job.status === 'done' && <Check size={17} aria-label="下载成功" />}
             {((job.status === 'downloading' && !job.input.native) || job.status === 'queued') && <button className="quiet-button" onClick={() => queue.cancel(job.id)} aria-label={`取消 ${job.input.title}`}><X size={15} />取消</button>}
             {['error', 'cancelled'].includes(job.status) && <button className="quiet-button" onClick={() => queue.retry(job.id)} aria-label={`重试 ${job.input.title}`}><RotateCcw size={15} />重试</button>}
             {job.status === 'done' && job.input.native && <button className="quiet-button" onClick={() => void invoke('reveal_in_finder', { path: job.output }).catch(() => setError('无法打开文件目录'))}><FolderOpen size={16} />打开目录</button>}
           </div></div>
+          <p className="job-timing"><Clock3 size={12} />{job.status === 'queued' ? `排队 ${formatElapsed(Math.max(0, clock - job.enqueuedAt))}` : <><span>解析 {formatElapsed(job.input.parseMs ?? 0)}</span><span>下载 {formatElapsed(job.timing?.downloadMs ?? Math.max(0, clock - (job.startedAt ?? clock)))}</span>{job.timing && <span>合计 {formatElapsed(job.timing.totalMs ?? 0)}</span>}{(job.timing?.queueMs ?? 0) >= 1000 && <span>含排队 {formatElapsed(job.timing!.queueMs!)}</span>}</>}</p>
           {job.status === 'downloading' && <div className={`job-progress ${job.progress === null ? 'indeterminate' : ''}`} role="progressbar" aria-label={`${job.input.title} 下载进度`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={job.progress ?? undefined}><span style={{ width: job.progress === null ? '35%' : `${job.progress}%` }} /></div>}
           {job.status === 'error' && <p className="tool-error" role="alert">{job.error}</p>}
         </li>)}</ol>
       </section>}
       <div className="history-strip"><button className="quiet-button" onClick={() => setShowHistory((v) => !v)} aria-expanded={showHistory}><History size={16} />最近下载<span>{history.length}</span></button><span>仅保存在本机</span></div>
-      {showHistory && <div className="download-history">{history.length ? history.map((item) => <button key={item.url} disabled={busy} onClick={() => { setInput(item.url); setData(null); setError(''); fieldRef.current?.focus() }}><span>{item.title}</span><small>{item.date}</small><ArrowUpRight size={16} /></button>) : <p>还没有记录，保存第一个视频后会出现在这里。</p>}{history.length > 0 && <button className="quiet-button" onClick={() => saveDownloadHistory([])}>清除记录</button>}</div>}
+      {showHistory && <div className="download-history">{history.length ? history.map((item) => <button key={item.url} disabled={busy} onClick={() => { setInput(item.url); setData(null); setError(''); setParseMs(null); setPreviewOpen(false); fieldRef.current?.focus() }}><span className="history-item-copy"><strong>{item.title}</strong>{item.timing && <small>解析 {formatElapsed(item.timing.parseMs ?? 0)} · 下载 {formatElapsed(item.timing.downloadMs ?? 0)} · 合计 {formatElapsed(item.timing.totalMs ?? 0)}</small>}</span><small>{item.date}</small><ArrowUpRight size={16} /></button>) : <p>还没有记录，保存第一个视频后会出现在这里。</p>}{history.length > 0 && <button className="quiet-button" onClick={() => saveDownloadHistory([])}>清除记录</button>}</div>}
     </div>
   )
 }
+

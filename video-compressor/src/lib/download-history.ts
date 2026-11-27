@@ -1,21 +1,27 @@
+import { validTiming, type DownloadTiming } from './download-timing'
+
 export const HISTORY_KEY = 'lightvid.downloads.v1'
 export const HISTORY_EVENT = 'lightvid:download-history'
 export interface DownloadRecord {
   title: string
   url: string
   date: string
+  timing?: DownloadTiming
 }
 let memory: DownloadRecord[] = []
 
-export function downloadRecord(title: string, url: string): DownloadRecord {
-  return { title, url, date: new Date().toLocaleDateString('zh-CN') }
+export function downloadRecord(title: string, url: string, timing?: DownloadTiming): DownloadRecord {
+  return { title, url, date: new Date().toLocaleDateString('zh-CN'), ...(timing && validTiming(timing) ? { timing } : {}) }
 }
 
 export function loadDownloadHistory(): DownloadRecord[] {
   try {
     const items: unknown = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')
     return Array.isArray(items) ? items.filter(item => typeof item?.title === 'string' &&
-      typeof item?.url === 'string' && typeof item?.date === 'string').slice(0, 6) : []
+      typeof item?.url === 'string' && typeof item?.date === 'string').map(item => ({
+        title: item.title, url: item.url, date: item.date,
+        ...(item.timing && validTiming(item.timing) ? { timing: item.timing } : {}),
+      })).slice(0, 6) : []
   } catch { return memory }
 }
 
@@ -34,3 +40,4 @@ export function subscribeDownloadHistory(callback: () => void) {
     window.removeEventListener('storage', storage)
   }
 }
+

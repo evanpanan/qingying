@@ -1,3 +1,5 @@
+import type { DownloadTiming } from './download-timing'
+
 export const DOWNLOAD_CONCURRENCY = 2
 
 export interface DownloadInput {
@@ -8,6 +10,7 @@ export interface DownloadInput {
   ext: string
   index?: number
   native: boolean
+  parseMs?: number
 }
 
 export interface DownloadJob {
@@ -15,11 +18,16 @@ export interface DownloadJob {
   input: DownloadInput
   status: 'queued' | 'downloading' | 'done' | 'error' | 'cancelled'
   progress: number | null
+  enqueuedAt: number
+  startedAt?: number
+  finishedAt?: number
+  timing?: DownloadTiming
   output?: string
   error?: string
 }
 
 interface QueueOptions {
+  now?: () => number
   execute: (job: DownloadJob, signal: AbortSignal, progress: (value: number) => void) => Promise<string>
   onCompleted: (job: DownloadJob) => void
 }
@@ -48,7 +56,7 @@ export class DownloadQueue {
       ['queued', 'downloading'].includes(job.status) && sameDownload(job.input, input))
     if (duplicate) return duplicate.id
     const id = crypto.randomUUID()
-    this.jobs = [...this.jobs, { id, input: { ...input }, status: 'queued', progress: null }]
+    this.jobs = [...this.jobs, { id, input: { ...input }, status: 'queued', progress: null, enqueuedAt: this.now() }]
     this.emit()
     this.pump()
     return id
@@ -58,7 +66,7 @@ export class DownloadQueue {
     const job = this.jobs.find(item => item.id === id)
     if (!job || this.active.has(id) || !['error', 'cancelled'].includes(job.status)) return
     if (this.jobs.some(item => item.id !== id && ['queued', 'downloading'].includes(item.status) && sameDownload(item.input, job.input))) return
-    this.patch(id, { status: 'queued', progress: null, error: undefined, output: undefined })
+    this.patch(id, { status: 'queued', progress: null, error: undefined, output: undefined, enqueuedAt: this.now(), startedAt: undefined, finishedAt: undefined, timing: undefined })
     this.pump()
   }
 
@@ -67,7 +75,8 @@ export class DownloadQueue {
     if (!job || !['queued', 'downloading'].includes(job.status)) return
     // The native command cannot cancel an already running process.
     if (job.input.native && job.status === 'downloading') return
-    this.patch(id, { status: 'cancelled', progress: null })
+    const finishedAt = this.now()
+    this.patch(id, { status: 'cancelled', progress: null, finishedAt, timing: this.timing(job, finishedAt) })
     this.active.get(id)?.abort()
   }
 
@@ -78,6 +87,14 @@ export class DownloadQueue {
   clearFinished() {
     this.jobs = this.jobs.filter(job => ['queued', 'downloading'].includes(job.status))
     this.emit()
+  }
+
+  private now() { return (this.options.now ?? (() => performance.now()))() }
+  private timing(job: DownloadJob, finishedAt: number): DownloadTiming {
+    const parseMs = job.input.parseMs ?? 0
+    const queueMs = Math.max(0, (job.startedAt ?? finishedAt) - job.enqueuedAt)
+    const downloadMs = job.startedAt === undefined ? 0 : Math.max(0, finishedAt - job.startedAt)
+    return { parseMs, queueMs, downloadMs, totalMs: parseMs + queueMs + downloadMs }
   }
 
   private emit() { this.listeners.forEach(listener => listener()) }
@@ -92,8 +109,9 @@ export class DownloadQueue {
       if (!next) break
       const controller = new AbortController()
       this.active.set(next.id, controller)
-      this.patch(next.id, { status: 'downloading' })
-      void this.run(next, controller)
+      const started = { ...next, status: 'downloading' as const, startedAt: this.now() }
+      this.patch(next.id, started)
+      void this.run(started, controller)
     }
   }
 
@@ -103,16 +121,19 @@ export class DownloadQueue {
         if (!controller.signal.aborted) this.patch(job.id, { progress: Math.max(0, Math.min(99, Math.round(value))) })
       })
       controller.signal.throwIfAborted()
-      const completed: DownloadJob = { ...job, status: 'done', progress: 100, output }
+      const finishedAt = this.now()
+      const completed: DownloadJob = { ...job, status: 'done', progress: 100, output, finishedAt, timing: this.timing(job, finishedAt) }
       this.patch(job.id, completed)
       try { this.options.onCompleted(completed) } catch { /* Optional history must not fail a saved file. */ }
     } catch (error) {
-      this.patch(job.id, controller.signal.aborted
-        ? { status: 'cancelled', progress: null }
-        : { status: 'error', error: error instanceof Error ? error.message : String(error) })
+      const finishedAt = this.jobs.find(item => item.id === job.id)?.finishedAt ?? this.now()
+      this.patch(job.id, { finishedAt, timing: this.timing(job, finishedAt), ...(controller.signal.aborted
+        ? { status: 'cancelled' as const, progress: null }
+        : { status: 'error' as const, error: error instanceof Error ? error.message : String(error) }) })
     } finally {
       this.active.delete(job.id)
       this.pump()
     }
   }
 }
+

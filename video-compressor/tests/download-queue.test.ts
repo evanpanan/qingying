@@ -98,3 +98,40 @@ test('原生任务 ID 独立，运行中不伪装取消，排队原生任务可�
   assert.equal(started.length, 2)
   assert.equal(completed.length, 2)
 })
+
+
+test('用时按任务记录解析、排队与传输，重试仅计本轮且取消后冻结', async () => {
+  let now = 1000
+  const pending = new Map<string, {resolve: (value: string) => void; reject: (error: Error) => void}>()
+  const completed: DownloadJob[] = []
+  const queue = new DownloadQueue({
+    now: () => now,
+    execute: job => new Promise((resolve, reject) => pending.set(job.id, {resolve, reject})),
+    onCompleted: job => { completed.push(job) },
+  })
+  const first = queue.enqueue({...input('timed-first'), parseMs: 300})
+  const second = queue.enqueue(input('timed-second'))
+  const third = queue.enqueue({...input('timed-third'), parseMs: 500})
+  now = 2500
+  pending.get(first)!.resolve('first.mp4')
+  await settle()
+  assert.deepEqual(completed[0].timing, {parseMs: 300, queueMs: 0, downloadMs: 1500, totalMs: 1800})
+  now = 3100
+  pending.get(third)!.reject(new Error('failed'))
+  await settle()
+  assert.deepEqual(queue.getSnapshot().find(j => j.id === third)!.timing, {parseMs: 500, queueMs: 1500, downloadMs: 600, totalMs: 2600})
+  now = 9000 // User waiting before retry must not inflate transfer time.
+  queue.retry(third)
+  now = 9800
+  pending.get(third)!.resolve('third.mp4')
+  await settle()
+  assert.deepEqual(completed[1].timing, {parseMs: 500, queueMs: 0, downloadMs: 800, totalMs: 1300})
+  now = 10000
+  queue.cancel(second)
+  const stopped = queue.getSnapshot().find(j => j.id === second)!.timing
+  now = 20000
+  pending.get(second)!.resolve('ignored.mp4')
+  await settle()
+  assert.deepEqual(queue.getSnapshot().find(j => j.id === second)!.timing, stopped)
+  assert.equal(completed.length, 2)
+})
