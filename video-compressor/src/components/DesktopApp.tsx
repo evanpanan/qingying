@@ -10,9 +10,9 @@ const Cleanup = lazy(() => import('../pages/Cleanup'))
 const Compress = lazy(() => import('./Compressor'))
 const tools = [
   { id: 'download', name: '视频下载', detail: '保存视频、音频与图集', icon: Download },
+  { id: 'cleanup', name: '画面修复', detail: '多选区去字幕、水印与本机 AI 修复', icon: Eraser },
   { id: 'convert', name: '格式转换', detail: '转换格式与提取音频', icon: ArrowLeftRight },
   { id: 'compress', name: '视频压缩', detail: '调整画质、分辨率与体积', icon: Minimize2 },
-  { id: 'cleanup', name: '画面修复', detail: '多选区去字幕、水印与本机 AI 修复', icon: Eraser },
 ] as const
 type Tool = typeof tools[number]['id']
 function isTool(value: string): value is Tool { return tools.some(tool => tool.id === value) }
@@ -65,7 +65,7 @@ export default function DesktopApp() {
           {visited.has('compress') && <section hidden={page !== 'compress'} aria-label="视频压缩工作区"><div className="desktop-compressor legacy-tool"><Compress active={page === 'compress'} /></div></section>}
         </Suspense>
       </div>
-      <footer className="desktop-statusbar"><span>轻影 1.5.0 · 更新于 2026-11-27</span><span>切换工具可继续处理任务</span></footer>
+      <footer className="desktop-statusbar"><span>轻影 1.5.1 · 更新于 2026-11-27</span><span>切换工具可继续处理任务</span></footer>
     </section>
   </div>
 }

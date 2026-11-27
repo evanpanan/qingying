@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {regionPixels,repairFilter,validRegion,outputDimensions} from '../src/lib/cleanup-geometry.ts'
+import {regionPixels,repairFilter,validRegion,outputDimensions,resizeRegion,RESIZE_HANDLES} from '../src/lib/cleanup-geometry.ts'
 test('选区映射使用视频坐标，不随预览缩放改变，并留出修补边缘',()=>{
  assert.deepEqual(regionPixels({x:.1,y:.8,width:.8,height:.1},1920,1080),{x:192,y:864,width:1536,height:108})
  assert.deepEqual(regionPixels({x:0,y:0,width:1,height:1},640,360),{x:1,y:1,width:638,height:358})
@@ -22,4 +22,19 @@ test('多个选区全部进入同一修补滤镜，空列表或过多区域被�
  assert.throws(()=>repairFilter([],640,360))
  assert.throws(()=>repairFilter(Array(9).fill(first),640,360))
  assert.throws(()=>repairFilter([first,{...second,width:2}],640,360))
+})
+
+test('八个方向缩放固定对边，保持有效尺寸并限制在视频内',()=>{
+ const original={x:.2,y:.3,width:.4,height:.3}
+ for(const handle of RESIZE_HANDLES){
+  const next=resizeRegion(original,handle,.1,.1)
+  assert(validRegion(next),handle)
+  if(!handle.includes('w'))assert(Math.abs(next.x-original.x)<1e-9,handle)
+  if(!handle.includes('n'))assert(Math.abs(next.y-original.y)<1e-9,handle)
+  if(!handle.includes('e'))assert(Math.abs(next.x+next.width-original.x-original.width)<1e-9,handle)
+  if(!handle.includes('s'))assert(Math.abs(next.y+next.height-original.y-original.height)<1e-9,handle)
+  for(const delta of [-10,10]){const clamped=resizeRegion(original,handle,delta,delta,.02,.03);assert(validRegion(clamped),handle);assert(clamped.width>=.02-1e-9);assert(clamped.height>=.03-1e-9)}
+ }
+ assert.deepEqual(original,{x:.2,y:.3,width:.4,height:.3})
+ assert.throws(()=>resizeRegion(original,'se',NaN,0))
 })

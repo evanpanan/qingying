@@ -270,3 +270,10 @@ AI 引擎为 ONNX Runtime Node 1.23.2 CPU，LaMa FP32 模型随安装包附带�
 桌面构建前运行 `node scripts/prepare-desktop-ai.mjs --force`：安装锁定版本的官方 ONNX Runtime、保留本平台原生库，并下载且校验模型。资源写入 `desktop-ai/models`，生成文件不提交仓库。打包流程将运行库、模型、许可证和处理脚本一起放入 app Resources，并签署原生库。`scripts/test-desktop-ai.mjs` 会在无模型下载的情况下验证真实双选区 AI 预览、修复视频、音频保留和快速模式；发布工作流对打包后的引擎重复此验收。
 
 [下载 macOS 1.5.0](https://github.com/evanpanan/qingying/releases/download/v1.5.0/_1.5.0_aarch64.dmg)。适用 Apple Silicon，临时签名，未 Apple 公证。
+
+
+## macOS 1.5.1（2026-11-27）
+
+修补选区支持拖动四条边和四个角调整大小，框内仍可移动。选区限制在视频内，缩小到最小尺寸后不会翻转或消失；键盘聚焦手柄后可用方向键微调，Shift 加快。修改选区会清除旧预览和导出结果，避免保存旧范围。
+
+网页导航、桌面侧边栏和 macOS 工具菜单顺序统一为：视频下载、画面修复、格式转换、视频压缩；桌面快捷键依次为 ⌘1–⌘4，画面修复为 ⌘2。

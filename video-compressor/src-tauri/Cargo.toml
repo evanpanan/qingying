@@ -1,6 +1,6 @@
 [package]
 name = "lightvid"
-version = "1.5.0"
+version = "1.5.1"
 description = "轻影 - 视频下载、格式转换与压缩"
 authors = ["you"]
 edition = "2021"

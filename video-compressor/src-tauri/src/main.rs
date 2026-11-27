@@ -609,9 +609,9 @@ pub fn run() {
             let menu = Menu::default(app)?;
             let tools = Submenu::with_items(app, "工具", true, &[
                 &MenuItem::with_id(app, "download", "视频下载", true, Some("CmdOrCtrl+1"))?,
-                &MenuItem::with_id(app, "convert", "格式转换", true, Some("CmdOrCtrl+2"))?,
-                &MenuItem::with_id(app, "compress", "视频压缩", true, Some("CmdOrCtrl+3"))?,
-                &MenuItem::with_id(app, "cleanup", "画面修复", true, Some("CmdOrCtrl+4"))?,
+                &MenuItem::with_id(app, "cleanup", "画面修复", true, Some("CmdOrCtrl+2"))?,
+                &MenuItem::with_id(app, "convert", "格式转换", true, Some("CmdOrCtrl+3"))?,
+                &MenuItem::with_id(app, "compress", "视频压缩", true, Some("CmdOrCtrl+4"))?,
                 &PredefinedMenuItem::separator(app)?,
             ])?;
             menu.append(&tools)?;

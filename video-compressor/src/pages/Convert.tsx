@@ -43,7 +43,7 @@ export default function Converter({ active = true }: { active?: boolean }) {
     } finally { busyRef.current = false; setBusy(false) }
   }
   return <main className="workspace-page">
-    <div className="page-intro reveal"><span className="eyebrow">02 / CONVERT</span><h1>换个格式，<em>继续创作。</em></h1><p>视频格式转换，或只留下你喜欢的声音。</p></div>
+    <div className="page-intro reveal"><span className="eyebrow">03 / CONVERT</span><h1>换个格式，<em>继续创作。</em></h1><p>视频格式转换，或只留下你喜欢的声音。</p></div>
     <div className="conversion-layout">
       <section className="studio-panel">
         <div className="section-label"><span>选择输出格式</span><ShieldCheck size={17} /></div>
@@ -67,3 +67,4 @@ export default function Converter({ active = true }: { active?: boolean }) {
     </div>
   </main>
 }
+

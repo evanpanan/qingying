@@ -43,7 +43,7 @@ test('页脚使用 Dissolve 礼花、中文反馈和动画偏好保护', () => {
 
 test('新版网站下载入口与桌面版本一致', () => {
   const config = JSON.parse(source('src-tauri/tauri.conf.json'))
-  assert.equal(config.version, '1.5.0')
+  assert.equal(config.version, '1.5.1')
   assert(source('src/pages/Landing.tsx').includes(`https://github.com/evanpanan/qingying/releases/download/v${config.version}/_${config.version}_aarch64.dmg`))
   assert(source('src-tauri/Cargo.toml').includes(`version = "${config.version}"`))
 })
@@ -51,7 +51,7 @@ test('新版网站下载入口与桌面版本一致', () => {
 
 test('AI 修复有桌面入口、系统菜单和打包模型，网页只提示下载', () => {
   assert.match(source('src/components/DesktopApp.tsx'), /id: 'cleanup'/)
-  assert.match(source('src-tauri/src/main.rs'), /CmdOrCtrl\+4/)
+  assert.match(source('src-tauri/src/main.rs'), /CmdOrCtrl\+2/)
   const repair = source('src/pages/Cleanup.tsx')
   assert.match(repair, /使用 AI 修复需要下载桌面版/)
   assert.match(repair, /mode!=='ai'\|\|native/)
@@ -59,4 +59,13 @@ test('AI 修复有桌面入口、系统菜单和打包模型，网页只提示�
   const config = JSON.parse(source('src-tauri/tauri.conf.json'))
   assert.equal(config.bundle.resources['../desktop-ai/'], 'desktop-ai/')
   assert.match(source('scripts/prepare-desktop-ai.mjs'), /1faef5301d78db7dda502fe59966957ec4b79dd64e16f03ed96913c7a4eb68d6/)
+})
+
+test('网页、桌面和系统菜单的修复入口在第二位且使用 ⌘2',()=>{
+ const web=source('src/components/StudioNav.tsx'),desktop=source('src/components/DesktopApp.tsx'),native=source('src-tauri/src/main.rs')
+ assert.deepEqual([...web.matchAll(/page: '(download|cleanup|convert|compress)'/g)].map(m=>m[1]),['download','cleanup','convert','compress'])
+ assert.deepEqual([...desktop.matchAll(/id: '(download|cleanup|convert|compress)'/g)].map(m=>m[1]),['download','cleanup','convert','compress'])
+ assert.match(native,/"cleanup", "画面修复", true, Some\("CmdOrCtrl\+2"\)/)
+ assert.match(native,/"convert", "格式转换", true, Some\("CmdOrCtrl\+3"\)/)
+ assert.match(native,/"compress", "视频压缩", true, Some\("CmdOrCtrl\+4"\)/)
 })

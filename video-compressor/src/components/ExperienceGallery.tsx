@@ -96,7 +96,7 @@ function ExperienceGallery({ onNavigate }: { onNavigate: (page: Page) => void })
           onFocus={(e) => { if (e.currentTarget.matches(':focus-visible')) setFocused(index) }}
           onBlur={() => setFocused(null)}
           onClick={() => setSelected(index)}>
-          <div className="card-label"><span>LIGHTVID STUDIO</span><span>0{index + 1} / {scene.label}</span></div>
+          <div className="card-label"><span>LIGHTVID STUDIO</span><span>{scene.page === 'download' ? '01' : scene.page === 'convert' ? '03' : '04'} / {scene.label}</span></div>
           <div className="motion-art" aria-hidden="true"><Illustration /></div>
           <div className="card-bottom"><span className="card-icon"><scene.icon size={18} /></span><h3>{scene.title}</h3><p>{scene.description}</p><span className="card-cta"><span>轻轻触碰，看看变化</span><ArrowUpRight size={14} /></span></div>
         </button>
@@ -107,3 +107,4 @@ function ExperienceGallery({ onNavigate }: { onNavigate: (page: Page) => void })
 }
 
 export default memo(ExperienceGallery)
+

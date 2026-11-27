@@ -77,12 +77,12 @@ jobs:
           pkill -x lightvid
       - uses: actions/upload-artifact@v4
         with:
-          name: LightVid-macOS-1.5.0
+          name: LightVid-macOS-1.5.1
           path: |
-            video-compressor/public/downloads/轻影_1.5.0_aarch64.dmg
+            video-compressor/public/downloads/轻影_1.5.1_aarch64.dmg
             ${{ runner.temp }}/desktop-launch.png
       - name: Publish verified installer
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.5.0 public/downloads/轻影_1.5.0_aarch64.dmg --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title '轻影 1.5.0 · 离线 AI 修复' --notes '更新日期：2026-11-27。内置 AI 推理引擎与模型，安装后可离线去字幕和水印；支持 8 个选区、预览与原音频保留，新增 ⌘4 修复工作区。适用于 Apple Silicon。临时签名，未 Apple 公证。'
+          gh release create v1.5.1 public/downloads/轻影_1.5.1_aarch64.dmg --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title '轻影 1.5.1 · 选区缩放与工具排序' --notes '更新日期：2026-11-27。选择框新增八方向缩放手柄；画面修复移至第二位，快捷键调整为 ⌘2；保留内置离线 AI、多选区及原音频。适用于 Apple Silicon。临时签名，未 Apple 公证。'

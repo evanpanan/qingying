@@ -27,3 +27,20 @@ export function outputDimensions(width:number,height:number) {
   const scale=Math.min(1,1280/width,720/height)
   return {width:Math.max(2,Math.floor(width*scale/2)*2),height:Math.max(2,Math.floor(height*scale/2)*2)}
 }
+
+export const RESIZE_HANDLES = ['nw','n','ne','e','se','s','sw','w'] as const
+export type ResizeHandle = typeof RESIZE_HANDLES[number]
+export const RESIZE_LABELS: Record<ResizeHandle,string> = {nw:'左上角',n:'上边',ne:'右上角',e:'右边',se:'右下角',s:'下边',sw:'左下角',w:'左边'}
+/** Keep the opposite edge fixed; stop at the image boundary or minimum size. */
+export function resizeRegion(region:RepairRegion,handle:ResizeHandle,dx:number,dy:number,minWidth=.005,minHeight=.005):RepairRegion {
+  if(!validRegion(region)||![dx,dy,minWidth,minHeight].every(Number.isFinite)||!RESIZE_HANDLES.includes(handle))throw new Error('选区调整参数无效')
+  let left=region.x,top=region.y,right=Math.min(1,left+region.width),bottom=Math.min(1,top+region.height)
+  const clamp=(value:number,min:number,max:number)=>Math.max(min,Math.min(max,value))
+  const minW=Math.min(Math.max(.0001,minWidth),handle.includes('w')?right:1-left)
+  const minH=Math.min(Math.max(.0001,minHeight),handle.includes('n')?bottom:1-top)
+  if(handle.includes('w'))left=clamp(left+dx,0,right-minW)
+  if(handle.includes('e'))right=clamp(right+dx,left+minW,1)
+  if(handle.includes('n'))top=clamp(top+dy,0,bottom-minH)
+  if(handle.includes('s'))bottom=clamp(bottom+dy,top+minH,1)
+  return {x:left,y:top,width:right-left,height:bottom-top}
+}
