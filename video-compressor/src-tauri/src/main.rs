@@ -595,6 +595,25 @@ fn reveal_in_finder(path: String) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .menu(|app| {
+            use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
+            // Retain standard macOS application, Edit and Window menus.
+            let menu = Menu::default(app)?;
+            let tools = Submenu::with_items(app, "工具", true, &[
+                &MenuItem::with_id(app, "download", "视频下载", true, Some("CmdOrCtrl+1"))?,
+                &MenuItem::with_id(app, "convert", "格式转换", true, Some("CmdOrCtrl+2"))?,
+                &MenuItem::with_id(app, "compress", "视频压缩", true, Some("CmdOrCtrl+3"))?,
+                &PredefinedMenuItem::separator(app)?,
+            ])?;
+            menu.append(&tools)?;
+            Ok(menu)
+        })
+        .on_menu_event(|app, event| {
+            let id = event.id().as_ref();
+            if matches!(id, "download" | "convert" | "compress") {
+                let _ = app.emit("desktop:navigate", id);
+            }
+        })
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
@@ -649,3 +668,4 @@ mod tests {
         }
     }
 }
+
