@@ -15,3 +15,11 @@ test('AI 导出保持长宽比、偶数尺寸，不放大小视频',()=>{
  assert.deepEqual(outputDimensions(1080,1920),{width:404,height:720})
  assert.deepEqual(outputDimensions(320,180),{width:320,height:180})
 })
+test('多个选区全部进入同一修补滤镜，空列表或过多区域被拒绝',()=>{
+ const first={x:.1,y:.8,width:.8,height:.1},second={x:.05,y:.05,width:.15,height:.15}
+ const filter=repairFilter([first,second],640,360)
+ assert.equal(filter,'scale=640:360,setsar=1,delogo=x=64:y=288:w=512:h=36:show=0,delogo=x=32:y=18:w=96:h=54:show=0')
+ assert.throws(()=>repairFilter([],640,360))
+ assert.throws(()=>repairFilter(Array(9).fill(first),640,360))
+ assert.throws(()=>repairFilter([first,{...second,width:2}],640,360))
+})

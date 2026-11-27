@@ -66,4 +66,4 @@ These notices do not grant a new license to the LightVid application itself.
 
 ONNX Runtime Web: Microsoft, MIT License, https://github.com/microsoft/onnxruntime . The npm package includes its license and notices.
 
-LaMa / Big-LaMa: Roman Suvorov and contributors, Apache License 2.0, https://github.com/advimman/lama . ONNX export by Carve, https://huggingface.co/Carve/LaMa-ONNX at c3c0c9e468934d62e79c329e35d82dd09ff8c444. Model SHA-256: 1faef5301d78db7dda502fe59966957ec4b79dd64e16f03ed96913c7a4eb68d6 . Weights are downloaded on user action or imported locally; videos are processed in the browser. A mirror may serve identical checksum-verified weights if the primary download fails.
+LaMa / Big-LaMa: Roman Suvorov and contributors, Apache License 2.0, https://github.com/advimman/lama . ONNX export by Carve, https://huggingface.co/Carve/LaMa-ONNX at c3c0c9e468934d62e79c329e35d82dd09ff8c444. Model SHA-256: 1faef5301d78db7dda502fe59966957ec4b79dd64e16f03ed96913c7a4eb68d6 . Weights are loaded automatically on preview/export; videos are processed in the browser. A mirror may serve identical checksum-verified weights if the primary download fails.

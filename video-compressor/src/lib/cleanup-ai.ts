@@ -1,5 +1,5 @@
 import type { InferenceSession } from 'onnxruntime-web'
-import { regionPixels, type RepairRegion } from './cleanup-geometry'
+import { validRegions, regionPixels, type RepairRegion } from './cleanup-geometry'
 const REV='c3c0c9e468934d62e79c329e35d82dd09ff8c444'
 const PATH=`Carve/LaMa-ONNX/resolve/${REV}/lama_fp32.onnx`
 export const MODEL_URL=`https://huggingface.co/${PATH}`
@@ -32,7 +32,7 @@ async function downloadModel(progress:(text:string)=>void,signal?:AbortSignal) {
       return bytes.buffer
     }catch(error){if(signal?.aborted)throw error;last=error}
   }
-  throw new Error(last instanceof Error?`${last.message}。可重试或导入已下载的模型文件。`:'无法下载 AI 模型，请重试或导入模型')
+  throw new Error(last instanceof Error?`${last.message}。请重试或稍后再试。`:'无法准备 AI 修复资源，请稍后再试')
 }
 export async function loadRepairModel(progress:(text:string)=>void,signal?:AbortSignal,local?:File) {
   if(session)return
@@ -72,4 +72,14 @@ export async function inpaintFrame(source:HTMLCanvasElement,region:RepairRegion,
     const repaired=document.createElement('canvas');repaired.width=source.width;repaired.height=source.height
     const target=repaired.getContext('2d')!;target.drawImage(source,0,0);target.save();target.beginPath();target.rect(p.x,p.y,p.width,p.height);target.clip();target.drawImage(small,x,y,w,h);target.restore();return repaired
   }finally{imageTensor.dispose();maskTensor.dispose();if(result)for(const value of Object.values(result))value.dispose()}
+}
+
+export async function inpaintRegions(source: HTMLCanvasElement, regions: RepairRegion[], signal?: AbortSignal) {
+  if (!validRegions(regions)) throw new Error('请选择有效修补区域')
+  let output = source
+  for (const region of regions) {
+    aborted(signal)
+    output = await inpaintFrame(output, region, signal)
+  }
+  return output
 }
