@@ -45,7 +45,7 @@ fn valid(spec:&RepairSpec)->bool{
  if let Some(stdout)=child.stdout.take(){for line in BufReader::new(stdout).lines().map_while(Result::ok){if let Ok(mut data)=serde_json::from_str::<serde_json::Value>(&line){data["job"]=job.clone().into();let _=app.emit("repair-progress",data);}}}
  let result=child.wait().map_err(|e|e.to_string());let _=state.0.lock().map(|mut jobs|jobs.remove(&job));let error=errors.join().unwrap_or_default();
  if !result?.success(){return Err(if error.is_empty(){"操作已停止或处理失败".into()}else{error.chars().take(1000).collect()})}
- if !dir.join(output).is_file(){return Err("未生成修复结果".into())}if spec.preview{Ok(output.to_string())}else{super::library::remember(&app,&dir.join(output),&spec.title,&spec.mode)}
+ if !dir.join(output).is_file(){return Err("未生成修复结果".into())}if spec.preview{Ok(output.to_string())}else{let id=super::library::remember(&app,&dir.join(output),&spec.title,&spec.mode)?;let _=fs::remove_file(dir.join(output));let _=fs::remove_file(dir.join(output).with_extension("srt"));Ok(id)}
  }).await.map_err(|e|e.to_string())?
 }
 #[tauri::command]pub fn repair_cancel(app:tauri::AppHandle,job:String,state:State<'_,Jobs>)->Result<(),String>{

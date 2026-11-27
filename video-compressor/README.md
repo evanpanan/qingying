@@ -265,7 +265,7 @@ macOS 侧边栏和系统工具菜单新增「画面修复」（⌘4）。支持�
 
 AI 引擎为 ONNX Runtime Node 1.23.2 CPU，LaMa FP32 模型随安装包附带，安装后可离线使用，无需 API、密钥或用户下载模型。模型固定版本及校验和见 THIRD_PARTY_NOTICES.md。AI 限 100 MB 源视频、每次最多 20 秒，输出最高 720p / 12fps；逐帧修复可能闪烁，复杂场景可能有痕迹，多个选区会增加处理时间，不承诺真实还原或移动水印跟踪。
 
-网页只提供快速修补与字幕轨移除；选择 AI 修复时提示下载桌面版，并显示版本及更新日期。网页不再下载 ONNX 运行时或模型，也不接付费修复 API。
+网页只提供快速修补与字幕轨移除；选择 AI 修复时提示下载桌面版，并显示版本及更新日期。网页的 AI 修复入口不下载修复模型，也不接付费修复 API；视频翻译另使用本机语音模型，见下方 1.6.1。
 
 桌面构建前运行 `node scripts/prepare-desktop-ai.mjs --force`：安装锁定版本的官方 ONNX Runtime、保留本平台原生库，并下载且校验模型。资源写入 `desktop-ai/models`，生成文件不提交仓库。打包流程将运行库、模型、许可证和处理脚本一起放入 app Resources，并签署原生库。`scripts/test-desktop-ai.mjs` 会在无模型下载的情况下验证真实双选区 AI 预览、修复视频、音频保留和快速模式；发布工作流对打包后的引擎重复此验收。
 
@@ -279,7 +279,7 @@ AI 引擎为 ONNX Runtime Node 1.23.2 CPU，LaMa FP32 模型随安装包附带�
 网页导航、桌面侧边栏和 macOS 工具菜单顺序统一为：视频下载、画面修复、格式转换、视频压缩；桌面快捷键依次为 ⌘1–⌘4，画面修复为 ⌘2。
 
 
-## macOS / 网页 1.6.0（2026-11-27）
+## macOS / 网页 1.6.1（2026-11-27）
 
 两端「画面修复」中的添加修补选区使用醒目的朱红按钮，保留八方向缩放、多区域选择和 ⌘2 工具顺序。完成后自动进入处理历史：桌面结果独立保存到应用数据目录的 results 文件夹，未另存也能打开视频、定位所在文件夹、另存副本，重启仍保留；升级时迁移仍存在的旧版修复缓存。网页用 IndexedDB 保存最近 10 条、合计最多 200 MB；浏览器清理站点数据会删除历史，需及时下载。网页不能直接打开操作系统文件夹，可从浏览器下载列表定位。
 
@@ -287,4 +287,4 @@ AI 引擎为 ONNX Runtime Node 1.23.2 CPU，LaMa FP32 模型随安装包附带�
 
 模型固定版本和许可证见 THIRD_PARTY_NOTICES.md。脚本 scripts/test-desktop-translation.mjs 使用仓库中的中文语音合成测试素材，在打包应用内真实运行识别、翻译、英文 TTS、区域修补和字幕合成，并检查输出音轨。
 
-[下载 macOS 1.6.0](https://github.com/evanpanan/qingying/releases/download/v1.6.0/_1.6.0_aarch64.dmg)。适用 Apple Silicon，更新于 2026-11-27。
+[下载 macOS 1.6.1](https://github.com/evanpanan/qingying/releases/download/v1.6.1/_1.6.1_aarch64.dmg)。适用 Apple Silicon，更新于 2026-11-27。

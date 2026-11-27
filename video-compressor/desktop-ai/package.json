@@ -1,7 +1,7 @@
 {
   "name": "lightvid-desktop-ai",
   "private": true,
-  "version": "1.6.0",
+  "version": "1.6.1",
   "type": "module",
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",

@@ -11,7 +11,7 @@ permissions:
   contents: write
 concurrency:
   group: macos-release
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   release:
     runs-on: macos-15
@@ -78,12 +78,12 @@ jobs:
           pkill -x lightvid
       - uses: actions/upload-artifact@v4
         with:
-          name: LightVid-macOS-1.6.0
+          name: LightVid-macOS-1.6.1
           path: |
-            video-compressor/public/downloads/轻影_1.6.0_aarch64.dmg
+            video-compressor/public/downloads/轻影_1.6.1_aarch64.dmg
             ${{ runner.temp }}/desktop-launch.png
       - name: Publish verified installer
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.6.0 public/downloads/轻影_1.6.0_aarch64.dmg --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title '轻影 1.6.0 · 本机视频翻译与修复历史' --notes '更新日期：2026-11-27。新增免费本机中文语音转英文配音和英文字幕，可叠加多选区修补；翻译模型首次自动下载约 350 MB，无需 API。处理结果自动保存历史，支持直接打开视频、所在文件夹和另存。添加修补选区按钮更醒目。翻译每次最多 60 秒、200 MB，叠加 AI 修复最多 20 秒；英文配音替换原音轨，机器翻译需检查。适用于 Apple Silicon。临时签名，未 Apple 公证。'
+          gh release create v1.6.1 public/downloads/轻影_1.6.1_aarch64.dmg --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title '轻影 1.6.1 · 本机视频翻译与修复历史' --notes '更新日期：2026-11-27。新增免费本机中文语音转英文配音和英文字幕，可叠加多选区修补；翻译模型首次自动下载约 350 MB，无需 API。处理结果自动保存历史，支持直接打开视频、所在文件夹和另存。添加修补选区按钮更醒目。翻译每次最多 60 秒、200 MB，叠加 AI 修复最多 20 秒；英文配音替换原音轨，机器翻译需检查。适用于 Apple Silicon。临时签名，未 Apple 公证。'

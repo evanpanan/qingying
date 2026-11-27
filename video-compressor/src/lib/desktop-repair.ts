@@ -22,10 +22,10 @@ export class DesktopRepair {
     signal.addEventListener('abort',stop,{once:true})
     try{
       signal.throwIfAborted()
-      await invoke('repair_run',{job,spec:{title:file.name,mode,regions,width,height,start,end,time,preview,...translation}})
+      const result=await invoke<string>('repair_run',{job,spec:{title:file.name,mode,regions,width,height,start,end,time,preview,...translation}})
       signal.throwIfAborted()
       if(preview){const bytes=await invoke<number[]>('repair_preview',{job});return new Blob([new Uint8Array(bytes)],{type:'image/png'})}
-      return job
+      return result
     }finally{signal.removeEventListener('abort',stop);off()}
   }
   async save(job:string,name:string){
