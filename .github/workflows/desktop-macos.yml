@@ -56,7 +56,7 @@ jobs:
         run: npm run release:macos
       - name: Verify bundled engines, launch and media processing
         run: |
-          app="src-tauri/target/release/bundle/macos/轻影.app"
+          app="$PWD/src-tauri/target/release/bundle/macos/轻影.app"
           codesign --verify --deep --strict --verbose=2 "$app"
           for engine in ffmpeg yt-dlp node; do
             test -x "$app/Contents/MacOS/$engine"
