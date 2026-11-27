@@ -53,8 +53,8 @@ export default function DesktopApp() {
     <aside className="desktop-sidebar" aria-label="工具侧边栏">
       <div className="desktop-brand"><span className="brand-symbol"><svg viewBox="0 0 48 48" width="35" height="35" aria-hidden="true"><use href="/lightvid.svg?v=2#brand-mark" /></svg></span><strong>轻影<span>LIGHTVID</span></strong></div>
       <div className="desktop-sidebar-label">工具</div>
-      <nav aria-label="媒体工具">{tools.map((tool, index) => <button key={tool.id} aria-current={page === tool.id ? 'page' : undefined} onClick={() => navigate(tool.id)}><tool.icon size={18} /><span>{tool.name}</span><kbd>⌘{index + 1}</kbd></button>)}</nav>
-      <div className="desktop-sidebar-bottom"><span className="status-dot" /> 本机处理<p>转换、压缩与 AI 修复在本机完成<br />原文件保持不变</p></div>
+      <nav aria-label="媒体工具">{tools.map((tool, index) => <button key={tool.id} data-tool={tool.id} aria-current={page === tool.id ? 'page' : undefined} onClick={() => navigate(tool.id)}><tool.icon size={18} /><span>{tool.name}</span><kbd>⌘{index + 1}</kbd></button>)}</nav>
+      <div className="desktop-sidebar-bottom"><span className="status-dot" /> 本机处理<p>转换、压缩与 AI 修复在本机完成<br />原文件保持不变</p><DesktopUpdater /></div>
     </aside>
     <section className="desktop-main">
       <header className="desktop-toolbar"><button className="icon-button" aria-label={sidebar ? '隐藏侧边栏' : '显示侧边栏'} aria-expanded={sidebar} onClick={() => setSidebar(value => !value)}><PanelLeft size={19} /></button><div><h1>{current.name}</h1><span>{current.detail}</span></div><span className="desktop-toolbar-hint"><Keyboard size={15} /> ⌘1 / ⌘2 / ⌘3 / ⌘4</span></header>
@@ -62,11 +62,11 @@ export default function DesktopApp() {
         <section hidden={page !== 'download'} aria-label="视频下载工作区"><div className="desktop-section-heading"><h2>新建下载</h2><span>粘贴分享链接或整段文案 · ⌘L</span></div><DownloadTool guidanceKey={guidance} /></section>
         <Suspense fallback={<p role="status">正在打开工具…</p>}>
           {visited.has('convert') && <section hidden={page !== 'convert'} aria-label="格式转换工作区"><Convert active={page === 'convert'} /></section>}
-          {visited.has('cleanup') && <section hidden={page !== 'cleanup'} aria-label="画面修复工作区"><Cleanup /></section>}
+          {visited.has('cleanup') && <section hidden={page !== 'cleanup'} aria-label="画面修复工作区"><Cleanup active={page === 'cleanup'} /></section>}
           {visited.has('compress') && <section hidden={page !== 'compress'} aria-label="视频压缩工作区"><div className="desktop-compressor legacy-tool"><Compress active={page === 'compress'} /></div></section>}
         </Suspense>
       </div>
-      <footer className="desktop-statusbar"><span>轻影 1.7.0 · 更新于 2026-11-27</span><DesktopUpdater /></footer>
+      <footer className="desktop-statusbar"><span>轻影 1.7.1 · 更新于 2026-11-27</span><span>切换工具可继续处理任务</span></footer>
     </section>
   </div>
 }

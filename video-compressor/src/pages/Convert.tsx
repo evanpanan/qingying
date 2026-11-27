@@ -25,7 +25,7 @@ export default function Converter({ active = true }: { active?: boolean }) {
   function add(inputs: CompressInput[]) {
     setJobs((old) => [...old, ...inputs.map((input) => ({ id: crypto.randomUUID(), input, state: 'ready' as const, progress: 0 }))])
   }
-  useDesktopVideoDrop(active && !busy, add)
+  useDesktopVideoDrop(active && !busy, add,{tool:'convert'})
   async function pick() {
     try { const files = await pickVideoFiles(); if (files) add(files) } catch (e) { setError((e as Error).message) }
   }

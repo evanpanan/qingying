@@ -1,13 +1,21 @@
-import {invoke} from '@tauri-apps/api/core'
+import {invoke,convertFileSrc} from '@tauri-apps/api/core'
 import {listen} from '@tauri-apps/api/event'
 import {save} from '@tauri-apps/plugin-dialog'
 import type {TranslateOptions} from './translation'
 import type {CleanupMode,RepairRegion} from './cleanup-geometry'
+export type RepairFile = File | {name:string;size:number;native:true}
 export class DesktopRepair {
-  private file:File|null=null
+  private file:RepairFile|null=null
   private job:string|null=null
-  async prepare(file:File,signal:AbortSignal,onProgress:(value:number,text:string)=>void){
+  async open(path:string,signal:AbortSignal){
+    const result=await invoke<{job:string;name:string;size:number;preview_path:string}>('repair_import',{path})
+    if(signal.aborted){void invoke('repair_discard',{job:result.job}).catch(()=>{});signal.throwIfAborted()}
+    this.dispose();const file:RepairFile={name:result.name,size:result.size,native:true};this.file=file;this.job=result.job
+    return {file,url:convertFileSrc(result.preview_path)}
+  }
+  async prepare(file:RepairFile,signal:AbortSignal,onProgress:(value:number,text:string)=>void){
     if(this.file===file&&this.job)return this.job
+    if(!(file instanceof File))throw new Error('本机视频已失效，请重新拖入')
     this.dispose()
     const job=await invoke<string>('repair_begin');this.job=job
     try{
@@ -15,7 +23,7 @@ export class DesktopRepair {
       signal.throwIfAborted();this.file=file;return job
     }catch(error){this.dispose();throw error}
   }
-  async run(file:File,mode:CleanupMode,regions:RepairRegion[],width:number,height:number,start:number,end:number,time:number,preview:boolean,onProgress:(value:number,text:string)=>void,signal:AbortSignal,translation?:TranslateOptions){
+  async run(file:RepairFile,mode:CleanupMode,regions:RepairRegion[],width:number,height:number,start:number,end:number,time:number,preview:boolean,onProgress:(value:number,text:string)=>void,signal:AbortSignal,translation?:TranslateOptions){
     const job=await this.prepare(file,signal,onProgress)
     const off=await listen<{job:string;progress:number;text:string}>('repair-progress',event=>{if(event.payload.job===job)onProgress(event.payload.progress,event.payload.text)})
     const stop=()=>{void invoke('repair_cancel',{job}).catch(()=>{})}

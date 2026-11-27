@@ -69,7 +69,7 @@ jobs:
         run: |
           app="$PWD/src-tauri/target/release/bundle/macos/轻影.app"
           codesign --verify --deep --strict --verbose=2 "$app"
-          LIGHTVID_UPDATE_ARCHIVE="$PWD/public/downloads/LightVid_1.7.0_aarch64.app.tar.gz" LIGHTVID_UPDATE_MANIFEST="$PWD/public/downloads/latest.json" cargo test --manifest-path src-tauri/Cargo.toml updater_tests::signed_update_rejects_tampering_and_replaces_only_app_bundle -- --exact
+          LIGHTVID_UPDATE_ARCHIVE="$PWD/public/downloads/LightVid_1.7.1_aarch64.app.tar.gz" LIGHTVID_UPDATE_MANIFEST="$PWD/public/downloads/latest.json" cargo test --manifest-path src-tauri/Cargo.toml updater_tests::signed_update_rejects_tampering_and_replaces_only_app_bundle -- --exact
           for engine in ffmpeg yt-dlp node; do
             test -x "$app/Contents/MacOS/$engine"
             if otool -L "$app/Contents/MacOS/$engine" | grep -E '/opt/homebrew|/usr/local/'; then
@@ -90,9 +90,9 @@ jobs:
           pkill -x lightvid
       - uses: actions/upload-artifact@v4
         with:
-          name: LightVid-macOS-1.7.0
+          name: LightVid-macOS-1.7.1
           path: |
-            video-compressor/public/downloads/轻影_1.7.0_aarch64.dmg
+            video-compressor/public/downloads/轻影_1.7.1_aarch64.dmg
             video-compressor/public/downloads/LightVid_*.app.tar.gz*
             video-compressor/public/downloads/latest.json
             ${{ runner.temp }}/desktop-launch.png
@@ -100,4 +100,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.7.0 public/downloads/轻影_1.7.0_aarch64.dmg public/downloads/LightVid_1.7.0_aarch64.app.tar.gz public/downloads/LightVid_1.7.0_aarch64.app.tar.gz.sig public/downloads/latest.json --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title '轻影 1.7.0 · 应用内更新' --notes '更新日期：2026-11-27。新增应用内更新：启动时自动检查，支持菜单或状态栏手动检查；下载后校验签名，点击安装并重启。处理任务结束后才能安装，保留历史和模型缓存。1.6.1 及更早版本需手动安装本版一次，之后可应用内升级。适用于 Apple Silicon。临时签名，未 Apple 公证。'
+          gh release create v1.7.1 public/downloads/轻影_1.7.1_aarch64.dmg public/downloads/LightVid_1.7.1_aarch64.app.tar.gz public/downloads/LightVid_1.7.1_aarch64.app.tar.gz.sig public/downloads/latest.json --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title '轻影 1.7.1 · 拖入视频与 AI 范围修正' --notes '更新日期：2026-11-27。画面修复支持从访达直接拖入视频；切换到 AI 修复自动调整为最多 20 秒，按钮禁用时显示具体原因；检查更新入口移至左下角。1.7.0 用户可在软件内更新，保留历史与模型缓存。适用于 Apple Silicon。临时签名，未 Apple 公证。'

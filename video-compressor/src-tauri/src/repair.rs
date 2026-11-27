@@ -1,7 +1,26 @@
 use serde::{Deserialize,Serialize};
-use std::{collections::HashMap,fs::{self,OpenOptions},io::{BufRead,BufReader,Read,Write},path::PathBuf,process::Stdio,sync::Mutex,time::{SystemTime,UNIX_EPOCH}};
+use std::{collections::{HashMap,HashSet},fs::{self,OpenOptions},io::{BufRead,BufReader,Read,Write},path::PathBuf,process::Stdio,sync::Mutex,time::{SystemTime,UNIX_EPOCH}};
 use tauri::{Emitter,Manager,State};
 #[derive(Default)]pub struct Jobs(pub Mutex<HashMap<String,u32>>);
+#[derive(Default)]pub struct DroppedFiles(pub Mutex<HashSet<PathBuf>>);
+#[derive(Serialize)]pub struct Imported{pub job:String,pub name:String,pub size:u64,pub preview_path:String}
+fn copy_dropped(source:&std::path::Path,dir:&std::path::Path)->Result<(String,u64,PathBuf),String>{
+ let ext=source.extension().and_then(|x|x.to_str()).unwrap_or("").to_ascii_lowercase();
+ if !["mp4","mov","mkv","webm","avi","m4v","wmv","flv","3gp","mpg","mpeg","ts","m2ts","vob","ogv"].contains(&ext.as_str()){return Err("请拖入视频文件".into())}
+ let info=fs::metadata(source).map_err(|e|format!("无法读取拖入文件：{e}"))?;
+ if !info.is_file(){return Err("请拖入单个视频，暂不支持文件夹".into())}if info.len()>500*1024*1024{return Err("请使用 500 MB 以内的视频".into())}
+ fs::create_dir_all(dir).map_err(|e|e.to_string())?;let target=dir.join("source");fs::copy(source,&target).map_err(|e|e.to_string())?;
+ let preview=dir.join(format!("view.{ext}"));fs::hard_link(&target,&preview).or_else(|_|fs::copy(&target,&preview).map(|_|())).map_err(|e|e.to_string())?;
+ Ok((source.file_name().and_then(|s|s.to_str()).unwrap_or("video").to_string(),info.len(),preview))
+}
+#[tauri::command]pub async fn repair_import(app:tauri::AppHandle,path:String)->Result<Imported,String>{
+ let source=PathBuf::from(path).canonicalize().map_err(|_|"文件已移动或不存在")?;
+ {let state=app.state::<DroppedFiles>();let mut allowed=state.0.lock().map_err(|_|"文件导入状态不可用")?;if !allowed.remove(&source){return Err("请从访达重新拖入这个视频".into())}}
+ tauri::async_runtime::spawn_blocking(move||{let job=repair_begin(app.clone())?;let dir=job_dir(&app,&job)?;
+ let result=(||{let (name,size,preview)=copy_dropped(&source,&dir)?;app.asset_protocol_scope().allow_file(&preview).map_err(|e|e.to_string())?;Ok(Imported{job,name,size,preview_path:preview.to_string_lossy().into()})})();
+ if result.is_err(){let _=fs::remove_dir_all(dir);}result
+ }).await.map_err(|e|e.to_string())?
+}
 #[derive(Clone,Deserialize,Serialize)]pub struct Region{pub x:f64,pub y:f64,pub width:f64,pub height:f64}
 #[derive(Clone,Deserialize,Serialize)]pub struct RepairSpec{#[serde(default)]pub title:String,pub mode:String,pub regions:Vec<Region>,pub width:u32,pub height:u32,pub start:f64,pub end:f64,pub time:f64,pub preview:bool,#[serde(default)]pub voice:String,#[serde(default,rename="removeRegions")]pub remove_regions:bool,#[serde(default,rename="repairMethod")]pub repair_method:String}
 fn job_dir(app:&tauri::AppHandle,job:&str)->Result<PathBuf,String>{
@@ -60,3 +79,5 @@ fn valid(spec:&RepairSpec)->bool{
 }
 #[tauri::command]pub fn repair_discard(app:tauri::AppHandle,job:String,state:State<'_,Jobs>)->Result<(),String>{if state.0.lock().map_err(|_|"任务状态异常")?.contains_key(&job){return Err("请先停止任务".into())}let path=job_dir(&app,&job)?;if path.exists(){fs::remove_dir_all(path).map_err(|e|e.to_string())?}Ok(())}
 #[cfg(test)]mod tests{use super::*;#[test]fn rejects_invalid_parameters(){let mut s=RepairSpec{title:String::new(),mode:"ai".into(),regions:vec![Region{x:0.1,y:0.1,width:0.2,height:0.2}],width:640,height:360,start:0.0,end:1.0,time:0.0,preview:false,voice:"af_heart".into(),remove_regions:false,repair_method:"quick".into()};assert!(valid(&s));s.regions[0].width=2.0;assert!(!valid(&s));s.regions.clear();s.mode="subtitle-track".into();assert!(valid(&s));s.mode="ai".into();assert!(!valid(&s));s.mode="translate".into();s.end=60.0;assert!(valid(&s));s.end=61.0;assert!(!valid(&s));s.end=30.0;s.remove_regions=true;s.repair_method="ai".into();assert!(!valid(&s));s.remove_regions=false;assert!(valid(&s));s.voice="invalid".into();assert!(!valid(&s));}}
+
+#[cfg(test)]mod drop_tests{use super::*;#[test]fn imports_a_private_copy_for_processing_and_preview(){let root=std::env::temp_dir().join(format!("lightvid-drop-{}",SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()));fs::create_dir_all(&root).unwrap();let source=root.join("中文 视频.MP4");fs::write(&source,b"video bytes").unwrap();let dir=root.join("job");let(name,size,preview)=copy_dropped(&source,&dir).unwrap();assert_eq!(name,"中文 视频.MP4");assert_eq!(size,11);fs::remove_file(&source).unwrap();assert_eq!(fs::read(dir.join("source")).unwrap(),b"video bytes");assert_eq!(fs::read(preview).unwrap(),b"video bytes");let invalid=root.join("note.txt");fs::write(&invalid,b"no").unwrap();assert!(copy_dropped(&invalid,&root.join("bad")).is_err());let folder=root.join("folder.mp4");fs::create_dir(&folder).unwrap();assert!(copy_dropped(&folder,&root.join("bad")).is_err());fs::remove_dir_all(root).unwrap();}}

@@ -24,19 +24,24 @@ export function useDesktopLinks() {
   }, [])
 }
 
-export function useDesktopVideoDrop(enabled: boolean, add: (inputs: CompressInput[]) => void) {
-  const latest = useRef({ enabled, add })
-  useEffect(() => { latest.current = { enabled, add } }, [enabled, add])
+export function useDesktopVideoDrop(enabled: boolean, add: (inputs: CompressInput[]) => void, options?: {tool?:string;hover?:(value:boolean)=>void;invalid?:()=>void}) {
+  const latest = useRef({ enabled, add, options })
+  useEffect(() => { latest.current = { enabled, add, options } }, [enabled, add, options])
   useEffect(() => {
     if (!isTauri()) return
     let disposed = false
     let unlisten: (() => void) | undefined
     void getCurrentWebview().onDragDropEvent(event => {
-      if (!latest.current.enabled || event.payload.type !== 'drop') return
+      if (!latest.current.enabled) return
+      const selected=document.querySelector('.desktop-sidebar nav [aria-current="page"]')?.getAttribute('data-tool')
+      if(latest.current.options?.tool&&selected&&selected!==latest.current.options.tool)return
+      latest.current.options?.hover?.(event.payload.type==='enter'||event.payload.type==='over')
+      if(event.payload.type!=='drop')return
       const inputs = event.payload.paths.filter(path => /\.(mp4|mov|mkv|webm|avi|m4v|wmv|flv|3gp|mpg|mpeg|ts|m2ts|vob|ogv)$/i.test(path))
         .map(file => ({ file, name: file.split(/[\\/]/).pop() || file, size: 0 }))
-      if (inputs.length) latest.current.add(inputs)
+      if (inputs.length) latest.current.add(inputs);else latest.current.options?.invalid?.()
     }).then(off => { if (disposed) off(); else unlisten = off }).catch(() => {})
     return () => { disposed = true; unlisten?.() }
   }, [])
 }
+

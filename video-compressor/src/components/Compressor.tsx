@@ -56,7 +56,7 @@ export default function Compressor({ active = true }: { active?: boolean }) {
     })
     setResults((old) => [...old, ...items])
   }, [])
-  useDesktopVideoDrop(active && !isProcessing, addInputs)
+  useDesktopVideoDrop(active && !isProcessing, addInputs,{tool:'compress'})
 
   const handlePickFiles = useCallback(async () => {
     const inputs = await pickVideoFiles()

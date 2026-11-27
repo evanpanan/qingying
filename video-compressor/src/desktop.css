@@ -60,3 +60,13 @@
 .update-close {position:absolute;right:15px;top:15px;}
 .update-actions {display:flex;gap:12px;margin:22px 0 15px;}
 .desktop-update-dialog progress {width:100%;accent-color:#6b7c52;}
+
+.desktop-sidebar-bottom .desktop-update-entry { margin-top:14px;width:100%;min-height:40px;justify-content:flex-start;padding:9px 12px;border-radius:10px;font-size:12px;color:var(--ink);background:#fffef980; }
+.desktop-sidebar-bottom .desktop-update-entry:hover {background:#fffef9;}
+.desktop-app[data-sidebar="false"] .desktop-sidebar {display:flex;position:fixed;bottom:0;left:0;z-index:30;background:transparent;border:0;padding:8px 12px;}
+.desktop-app[data-sidebar="false"] .desktop-sidebar>:not(.desktop-sidebar-bottom),.desktop-app[data-sidebar="false"] .desktop-sidebar-bottom>:not(.desktop-update-entry) {display:none;}
+.desktop-app[data-sidebar="false"] .desktop-sidebar-bottom {border:0;padding:0;}
+.desktop-app[data-sidebar="false"] .desktop-sidebar-bottom .desktop-update-entry {margin:0;background:var(--paper,#f7f6ef);}
+.desktop-app[data-sidebar="false"] .desktop-statusbar {padding-left:140px;}
+
+.desktop-app[data-sidebar="false"] .desktop-sidebar-bottom {font-size:0;}

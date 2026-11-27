@@ -601,6 +601,12 @@ fn reveal_in_finder(path: String) -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .manage(repair::Jobs::default())
+        .manage(repair::DroppedFiles::default())
+        .on_window_event(|window,event| {
+            if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop{paths,..})=event {
+                let state=window.state::<repair::DroppedFiles>();if let Ok(mut allowed)=state.0.lock(){allowed.clear();allowed.extend(paths.iter().filter_map(|p|p.canonicalize().ok()));};
+            }
+        })
         .setup(|app| {
             // Only per-process temporary repair copies; saved originals/results are elsewhere.
             library::migrate_legacy(app.handle());
@@ -640,7 +646,7 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .invoke_handler(tauri::generate_handler![
             library::library_list, library::library_action, library::library_save,
-            repair::repair_begin, repair::repair_upload, repair::repair_run, repair::repair_cancel, repair::repair_preview, repair::repair_save, repair::repair_discard,
+            repair::repair_import, repair::repair_begin, repair::repair_upload, repair::repair_run, repair::repair_cancel, repair::repair_preview, repair::repair_save, repair::repair_discard,
             compress_video,
             convert_video,
             native_extract,

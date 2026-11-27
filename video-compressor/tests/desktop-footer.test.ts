@@ -43,7 +43,7 @@ test('页脚使用 Dissolve 礼花、中文反馈和动画偏好保护', () => {
 
 test('新版网站下载入口与桌面版本一致', () => {
   const config = JSON.parse(source('src-tauri/tauri.conf.json'))
-  assert.equal(config.version, '1.7.0')
+  assert.equal(config.version, '1.7.1')
   assert(source('src/pages/Landing.tsx').includes(`https://github.com/evanpanan/qingying/releases/download/v${config.version}/_${config.version}_aarch64.dmg`))
   assert(source('src-tauri/Cargo.toml').includes(`version = "${config.version}"`))
 })

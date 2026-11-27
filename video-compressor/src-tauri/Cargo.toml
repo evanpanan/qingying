@@ -1,6 +1,6 @@
 [package]
 name = "lightvid"
-version = "1.7.0"
+version = "1.7.1"
 description = "轻影 - 视频下载、格式转换与压缩"
 authors = ["you"]
 edition = "2021"
@@ -9,7 +9,7 @@ edition = "2021"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-clipboard-manager = "2"
