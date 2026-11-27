@@ -1,26 +1,30 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
-import { Upload, Eraser, Download, RotateCcw, ShieldCheck, X, Plus, Trash2 } from 'lucide-react'
-import { cleanVideo, cleanVideoAI, previewQuick, seekVideo } from '../lib/cleanup'
-import { SUBTITLE_REGION, WATERMARK_REGION, validRegions, MAX_REPAIR_REGIONS, outputDimensions, type CleanupMode, type RepairRegion } from '../lib/cleanup-geometry'
-import {inpaintRegions, loadRepairModel} from '../lib/cleanup-ai'
+import { Upload, Eraser, Download, Monitor, RotateCcw, ShieldCheck, X, Plus, Trash2 } from 'lucide-react'
+import { cleanVideo, previewQuick } from '../lib/cleanup'
+import { SUBTITLE_REGION, WATERMARK_REGION, validRegions, MAX_REPAIR_REGIONS, type CleanupMode, type RepairRegion } from '../lib/cleanup-geometry'
+import {isTauri} from '../lib/env'
+import {DesktopRepair} from '../lib/desktop-repair'
 import '../cleanup.css'
 
 export default function Cleanup(){
+  const native=isTauri()
+  const [desktop]=useState(()=>new DesktopRepair())
+  const [nativeResult,setNativeResult]=useState('')
   const [file,setFile]=useState<File|null>(null),[url,setUrl]=useState(''),[size,setSize]=useState({width:0,height:0,duration:0})
   const [regions,setRegions]=useState<RepairRegion[]>([{...SUBTITLE_REGION}]),[active,setActive]=useState(0),[mode,setMode]=useState<CleanupMode>('quick')
   const [time,setTime]=useState(0),[start,setStart]=useState(0),[end,setEnd]=useState(0),[busy,setBusy]=useState(false),[progress,setProgress]=useState(0)
   const [status,setStatus]=useState(''),[error,setError]=useState(''),[preview,setPreview]=useState(''),[result,setResult]=useState('')
   const input=useRef<HTMLInputElement>(null),video=useRef<HTMLVideoElement>(null),origin=useRef<{x:number;y:number;index:number;move:boolean;region:RepairRegion}|null>(null),abort=useRef<AbortController|null>(null),mounted=useRef(true)
-  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;abort.current?.abort()}},[])
+  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;abort.current?.abort();desktop.dispose()}},[desktop])
   useEffect(()=>()=>{if(url)URL.revokeObjectURL(url)},[url]);useEffect(()=>()=>{if(preview)URL.revokeObjectURL(preview)},[preview]);useEffect(()=>()=>{if(result)URL.revokeObjectURL(result)},[result])
   const region=regions[active]
-  function invalidate(){setPreview('');setResult('')}
+  function invalidate(){setPreview('');setResult('');setNativeResult('')}
   function changeRegion(next:RepairRegion,index=active){setRegions(items=>items.map((r,i)=>i===index?next:r));invalidate()}
   function addRegion(){if(busy||regions.length>=MAX_REPAIR_REGIONS)return;setRegions(items=>[...items,{...WATERMARK_REGION}]);setActive(regions.length);invalidate()}
   function removeRegion(index:number){if(busy)return;setRegions(items=>items.filter((_,i)=>i!==index));setActive(Math.max(0,Math.min(active,regions.length-2)));invalidate()}
 
-  function changeMode(next:CleanupMode){setMode(next);setPreview('');setResult('')}
-  function select(next?:File){if(!next||busy)return;if(next.size>500*1024*1024){setError('请使用 500 MB 以内的视频');return}setFile(next);setUrl(URL.createObjectURL(next));setSize({width:0,height:0,duration:0});setTime(0);setStart(0);setEnd(0);setRegions([{...SUBTITLE_REGION}]);setActive(0);setPreview('');setResult('');setError('');setStatus('');setProgress(0)}
+  function changeMode(next:CleanupMode){setMode(next);invalidate()}
+  function select(next?:File){if(!next||busy)return;if(next.size>500*1024*1024){setError('请使用 500 MB 以内的视频');return}desktop.dispose();setNativeResult('');setFile(next);setUrl(URL.createObjectURL(next));setSize({width:0,height:0,duration:0});setTime(0);setStart(0);setEnd(0);setRegions([{...SUBTITLE_REGION}]);setActive(0);setPreview('');setResult('');setError('');setStatus('');setProgress(0)}
   function point(e:PointerEvent<HTMLDivElement>){const b=e.currentTarget.getBoundingClientRect();return {x:Math.max(0,Math.min(1,(e.clientX-b.left)/b.width)),y:Math.max(0,Math.min(1,(e.clientY-b.top)/b.height))}}
   function down(e:PointerEvent<HTMLDivElement>){
     if(busy||mode==='subtitle-track')return
@@ -37,10 +41,26 @@ export default function Cleanup(){
     else if(Math.abs(p.x-o.x)>.002&&Math.abs(p.y-o.y)>.002)changeRegion({x:Math.min(p.x,o.x),y:Math.min(p.y,o.y),width:Math.abs(p.x-o.x),height:Math.abs(p.y-o.y)},o.index)
   }
   async function run(job:(signal:AbortSignal)=>Promise<void>){if(busy)return;setBusy(true);setError('');setProgress(0);const controller=new AbortController();abort.current=controller;try{await job(controller.signal)}catch(e){if(mounted.current){setError(controller.signal.aborted?'操作已停止':(e instanceof Error?e.message:'处理失败，请重试'));setStatus('')}}finally{if(mounted.current)setBusy(false);abort.current=null}}
-  async function showPreview(){if(!file||!video.current||!validRegions(regions))return;await run(async signal=>{setStatus(mode==='ai'?'正在准备 AI 预览…':'正在生成区域修补预览…');let blob:Blob;if(mode==='ai'){await loadRepairModel(setStatus,signal);await seekVideo(video.current!,time);const source=document.createElement('canvas');const dims=outputDimensions(size.width,size.height);source.width=dims.width;source.height=dims.height;source.getContext('2d')!.drawImage(video.current!,0,0,source.width,source.height);const canvas=await inpaintRegions(source,regions,signal);blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('无法生成预览')),'image/png'))}else blob=await previewQuick(file,regions,size.width,size.height,time);signal.throwIfAborted();setPreview(URL.createObjectURL(blob));setStatus('预览已生成，请检查修补痕迹后导出')})}
-  async function exportVideo(){if(!file)return;setResult('');await run(async signal=>{let blob:Blob;if(mode==='ai'){if(file.size>100*1024*1024)throw new Error('AI 导出请使用 100 MB 以内的视频，可先压缩文件');await loadRepairModel(setStatus,signal);blob=await cleanVideoAI(file,url,regions,size.width,size.height,start,end,(p,text)=>{setProgress(p);setStatus(text)},signal)}else{setStatus(mode==='subtitle-track'?'正在移除独立字幕轨…':'正在修补并导出视频…');blob=await cleanVideo(file,regions,size.width,size.height,setProgress,mode==='subtitle-track')}signal.throwIfAborted();setResult(URL.createObjectURL(blob));setProgress(100);setStatus('处理完成，原文件未改动')})}
+  async function showPreview(){
+    if(!file||!video.current||!validRegions(regions)||mode==='ai'&&!native)return
+    await run(async signal=>{
+      setStatus('正在生成修补预览…')
+      const blob=native?await desktop.run(file,mode,regions,size.width,size.height,start,end,time,true,(p,text)=>{setProgress(p);setStatus(text)},signal):await previewQuick(file,regions,size.width,size.height,time)
+      signal.throwIfAborted();if(!(blob instanceof Blob))throw new Error('未生成预览');setPreview(URL.createObjectURL(blob));setStatus('预览已生成，请检查修补痕迹后导出')
+    })
+  }
+  async function exportVideo(){
+    if(!file||mode==='ai'&&!native)return
+    invalidate()
+    await run(async signal=>{
+      setStatus('正在修补并导出视频…')
+      if(native){const job=await desktop.run(file,mode,regions,size.width,size.height,start,end,time,false,(p,text)=>{setProgress(p);setStatus(text)},signal);if(typeof job!=='string')throw new Error('未生成结果');setNativeResult(job)}
+      else{const blob=await cleanVideo(file,regions,size.width,size.height,setProgress,mode==='subtitle-track');signal.throwIfAborted();setResult(URL.createObjectURL(blob))}
+      setProgress(100);setStatus('处理完成，原文件未改动')
+    })
+  }
   const ready=!!file&&size.width>0&&size.duration>0
-  return <main className="workspace-page cleanup-page"><div className="page-intro"><span className="eyebrow">04 / REPAIR</span><h1>留下画面，<em>去掉干扰。</em></h1><p>去字幕、去水印，在本机完成。可同时修补多个固定区域，先看效果，再保存副本。</p></div>
+  return <main className="workspace-page cleanup-page"><div className="page-intro"><span className="eyebrow">04 / REPAIR</span><h1>留下画面，<em>去掉干扰。</em></h1><p>去字幕、去水印，可同时修补多个固定区域，先看效果，再保存副本。</p></div>
     <div className="cleanup-layout"><section className="studio-panel"><div className="section-label"><span>视频与选区</span><ShieldCheck size={17}/></div>
       <input ref={input} hidden type="file" accept="video/*,.mp4,.mov,.mkv,.webm" onChange={e=>select(e.target.files?.[0])}/>
       {!file?<button className="cleanup-upload" onClick={()=>input.current?.click()} onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();select(e.dataTransfer.files[0])}}><Upload size={30}/><strong>选择需要处理的视频</strong><span>支持拖入 · 500 MB 以内 · 原文件保持不变</span></button>:<>
@@ -61,15 +81,14 @@ export default function Cleanup(){
       </>}
       {preview&&<div className="cleanup-preview"><div className="section-label"><span>当前帧处理效果</span><button className="icon-button" aria-label="关闭预览" onClick={()=>setPreview('')}><X size={15}/></button></div><img src={preview} alt="所选区域修补后的当前帧"/></div>}
     </section><aside className="studio-panel cleanup-options"><div className="section-label"><span>处理方式</span><Eraser size={17}/></div>
-      <div className="cleanup-modes">{([{id:'quick',title:'区域快速修补',desc:'根据周围像素填补，适合固定字幕和简单背景。'},{id:'ai',title:'AI 智能修复',desc:'自动准备 AI 修复资源，无需配置，可修补多个选区。'},{id:'subtitle-track',title:'移除独立字幕轨',desc:'仅去掉可开关的字幕轨，不处理画面上的文字。'}] as const).map(item=><button key={item.id} disabled={busy} aria-pressed={mode===item.id} className={mode===item.id?'selected':''} onClick={()=>changeMode(item.id)}><strong>{item.title}</strong><span>{item.desc}</span></button>)}</div>
-      {mode==='ai'&&<div className="cleanup-ai-info"><p>免费使用，无需密钥或模型配置。首次点击预览或导出时会自动准备约 208 MB 修复资源并尝试缓存。视频在本机处理，不会上传。</p><p>首版 AI 视频限 100 MB，每次最多 20 秒，导出最高 720p / 12 帧。多个选区会增加处理时间；逐帧重绘可能有闪烁，建议先预览。</p><div className="cleanup-range"><label>开始（秒）<input type="number" min={0} max={size.duration} step={.1} value={start} disabled={busy} onChange={e=>{setStart(Number(e.target.value));invalidate()}}/></label><label>结束（秒）<input type="number" min={0} max={size.duration} step={.1} value={end} disabled={busy} onChange={e=>{setEnd(Number(e.target.value));invalidate()}}/></label></div>
-
-      </div>}
+      <div className="cleanup-modes">{([{id:'quick',title:'区域快速修补',desc:'根据周围像素填补，适合固定字幕和简单背景。'},{id:'ai',title:'AI 智能修复',desc:native?'内置 AI 引擎与模型，离线修复多个选区。':'使用 AI 修复需要下载桌面版。'},{id:'subtitle-track',title:'移除独立字幕轨',desc:'仅去掉可开关的字幕轨，不处理画面上的文字。'}] as const).map(item=><button key={item.id} disabled={busy} aria-pressed={mode===item.id} className={mode===item.id?'selected':''} onClick={()=>changeMode(item.id)}><strong>{item.title}</strong><span>{item.desc}</span></button>)}</div>
+      {mode==='ai'&&<div className="cleanup-ai-info">{native?<><p>AI 引擎与模型已内置，无需 API 或下载配置。视频在本机处理，可离线使用。</p><p>AI 视频限 100 MB，每次最多 20 秒，导出最高 720p / 12 帧。多个选区会增加处理时间，可能出现帧间闪烁，建议先预览。</p><div className="cleanup-range"><label>开始（秒）<input type="number" min={0} max={size.duration} step={.1} value={start} disabled={busy} onChange={e=>{setStart(Number(e.target.value));invalidate()}}/></label><label>结束（秒）<input type="number" min={0} max={size.duration} step={.1} value={end} disabled={busy} onChange={e=>{setEnd(Number(e.target.value));invalidate()}}/></label></div></>:<div className="cleanup-desktop-notice"><Monitor size={24}/><strong>使用 AI 修复需要下载桌面版</strong><p>桌面版内置修复模型，安装后即可在本机处理。在线可继续使用区域快速修补和字幕轨移除。</p><a className="primary-button" href="https://github.com/evanpanan/qingying/releases/download/v1.5.0/_1.5.0_aarch64.dmg" download><Download size={16}/>下载 macOS 版</a><small>Apple Silicon · v1.5.0 · 更新于 2026-11-27</small></div>}</div>}
       <p className="cleanup-note">支持位置固定的字幕和水印。复杂背景可能有修补痕迹；AI 也不能恢复真实被遮挡的内容。请先拖动时间轴检查位置。</p>
       {error&&<p className="tool-error" role="alert">{error}</p>}
       {status&&<p className="cleanup-status" role="status">{status}</p>}
-      {busy&&<><progress max={100} value={progress} aria-label="处理进度"/><small>{progress}%</small>{mode==='ai'&&<button className="quiet-button" onClick={()=>{abort.current?.abort();setStatus('正在停止，当前区域完成后结束…')}}>停止当前操作</button>}</>}
-      <div className="cleanup-buttons">{mode!=='subtitle-track'&&<button className="quiet-button" disabled={busy||!ready||!validRegions(regions)} onClick={()=>void showPreview()}>预览当前帧</button>}<button className="primary-button" disabled={busy||!ready||(mode!=='subtitle-track'&&!validRegions(regions))||(mode==='ai'&&(start<0||end<=start||end-start>20.001||end>size.duration||!!file&&file.size>100*1024*1024))} onClick={()=>void exportVideo()}><Eraser size={17}/>{busy?'处理中…':'处理并导出副本'}</button></div>
+      {busy&&<><progress max={100} value={progress} aria-label="处理进度"/><small>{progress}%</small>{native&&<button className="quiet-button" onClick={()=>{abort.current?.abort();setStatus('正在停止，当前区域完成后结束…')}}>停止当前操作</button>}</>}
+      <div className="cleanup-buttons">{mode!=='subtitle-track'&&(mode!=='ai'||native)&&<button className="quiet-button" disabled={busy||!ready||!validRegions(regions)} onClick={()=>void showPreview()}>预览当前帧</button>}{(mode!=='ai'||native)&&<button className="primary-button" disabled={busy||!ready||(mode!=='subtitle-track'&&!validRegions(regions))||(mode==='ai'&&(start<0||end<=start||end-start>20.001||end>size.duration||!!file&&file.size>100*1024*1024))} onClick={()=>void exportVideo()}><Eraser size={17}/>{busy?'处理中…':'处理并导出副本'}</button>}</div>
+      {nativeResult&&<button className="primary-button" onClick={()=>void run(async()=>{if(await desktop.save(nativeResult,`${file?.name.replace(/\.[^.]+$/,'')}_repaired.mp4`))setStatus('修复视频已保存')})}><Download size={17}/>保存处理后的视频</button>}
       {result&&<a className="primary-button" href={result} download={`${file?.name.replace(/\.[^.]+$/,'')}_${mode==='ai'?'ai_repaired':'cleaned'}.mp4`}><Download size={17}/>保存处理后的视频</a>}
     </aside></div>
   </main>

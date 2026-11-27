@@ -27,7 +27,6 @@
     "embla-carousel-auto-scroll": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "lucide-react": "^1.57.0",
-    "onnxruntime-web": "^1.23.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

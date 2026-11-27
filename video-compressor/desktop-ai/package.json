@@ -1,0 +1,7 @@
+{
+  "name": "lightvid-desktop-ai",
+  "private": true,
+  "version": "1.5.0",
+  "type": "module",
+  "dependencies": { "onnxruntime-node": "1.23.2" }
+}

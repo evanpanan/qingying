@@ -1,12 +1,12 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "轻影",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "identifier": "com.lightvid.app",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "node scripts/prepare-desktop-ai.mjs && npm run build",
     "frontendDist": "../dist"
   },
   "app": {
@@ -46,10 +46,11 @@
       "binaries/yt-dlp",
       "binaries/node"
     ],
-    "resources": [
-      "../THIRD_PARTY_NOTICES.md",
-      "../NODE_LICENSE"
-    ]
+    "resources": {
+      "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md",
+      "../NODE_LICENSE": "NODE_LICENSE",
+      "../desktop-ai/": "desktop-ai/"
+    }
   },
   "plugins": {}
 }

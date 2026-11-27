@@ -1,6 +1,8 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod repair;
+
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
@@ -595,6 +597,12 @@ fn reveal_in_finder(path: String) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(repair::Jobs::default())
+        .setup(|app| {
+            // Only per-process temporary repair copies; saved originals/results are elsewhere.
+            if let Ok(cache) = app.path().app_cache_dir() { let _ = std::fs::remove_dir_all(cache.join("repair")); }
+            Ok(())
+        })
         .menu(|app| {
             use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
             // Retain standard macOS application, Edit and Window menus.
@@ -603,6 +611,7 @@ pub fn run() {
                 &MenuItem::with_id(app, "download", "视频下载", true, Some("CmdOrCtrl+1"))?,
                 &MenuItem::with_id(app, "convert", "格式转换", true, Some("CmdOrCtrl+2"))?,
                 &MenuItem::with_id(app, "compress", "视频压缩", true, Some("CmdOrCtrl+3"))?,
+                &MenuItem::with_id(app, "cleanup", "画面修复", true, Some("CmdOrCtrl+4"))?,
                 &PredefinedMenuItem::separator(app)?,
             ])?;
             menu.append(&tools)?;
@@ -610,7 +619,7 @@ pub fn run() {
         })
         .on_menu_event(|app, event| {
             let id = event.id().as_ref();
-            if matches!(id, "download" | "convert" | "compress") {
+            if matches!(id, "download" | "convert" | "compress" | "cleanup") {
                 let _ = app.emit("desktop:navigate", id);
             }
         })
@@ -618,6 +627,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .invoke_handler(tauri::generate_handler![
+            repair::repair_begin, repair::repair_upload, repair::repair_run, repair::repair_cancel, repair::repair_preview, repair::repair_save, repair::repair_discard,
             compress_video,
             convert_video,
             native_extract,

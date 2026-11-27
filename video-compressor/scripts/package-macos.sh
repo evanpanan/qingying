@@ -14,6 +14,7 @@ trap 'rm -rf "$staging"' EXIT
 for binary in "$app"/Contents/MacOS/*; do
   codesign --force --sign - "$binary"
 done
+find "$app/Contents/Resources/desktop-ai" -type f \( -name '*.node' -o -name '*.dylib' \) -exec codesign --force --sign - {} \;
 codesign --force --sign - "$app"
 codesign --verify --deep --strict --verbose=2 "$app"
 ditto "$app" "$staging/轻影.app"
@@ -22,3 +23,4 @@ output="$root/public/downloads/轻影_${version}_${arch}.dmg"
 hdiutil create -volname "轻影 ${version}" -srcfolder "$staging" -format UDZO -ov "$output"
 hdiutil verify "$output"
 shasum -a 256 "$output"
+

@@ -47,6 +47,8 @@ jobs:
           src-tauri/binaries/node-aarch64-apple-darwin --version
           src-tauri/binaries/yt-dlp-aarch64-apple-darwin --lightvid-info
       - run: npm ci
+      - name: Prepare bundled offline AI
+        run: node scripts/prepare-desktop-ai.mjs --force
       - run: npm run lint -- src
       - run: npm test
       - run: cargo test --manifest-path src-tauri/Cargo.toml
@@ -65,6 +67,9 @@ jobs:
           "$app/Contents/MacOS/ffmpeg" -y -f lavfi -i color=c=black:s=160x120:d=1 -c:v libx264 "$RUNNER_TEMP/input.mp4"
           "$app/Contents/MacOS/ffmpeg" -y -i "$RUNNER_TEMP/input.mp4" -c:v libx264 -crf 30 "$RUNNER_TEMP/output.mov"
           test -s "$RUNNER_TEMP/output.mov"
+          test -s "$app/Contents/Resources/desktop-ai/models/lama_fp32.onnx"
+          "$app/Contents/MacOS/node" -e 'const ort=require(process.argv[1]); console.log(ort.listSupportedBackends())' "$app/Contents/Resources/desktop-ai/node_modules/onnxruntime-node"
+          LIGHTVID_APP="$app" node scripts/test-desktop-ai.mjs
           open "$app"
           sleep 8
           pgrep -x lightvid
@@ -72,12 +77,12 @@ jobs:
           pkill -x lightvid
       - uses: actions/upload-artifact@v4
         with:
-          name: LightVid-macOS-1.4.0
+          name: LightVid-macOS-1.5.0
           path: |
-            video-compressor/public/downloads/轻影_1.4.0_aarch64.dmg
+            video-compressor/public/downloads/轻影_1.5.0_aarch64.dmg
             ${{ runner.temp }}/desktop-launch.png
       - name: Publish verified installer
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.4.0 public/downloads/轻影_1.4.0_aarch64.dmg --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title '轻影 1.4.0 · macOS 工作台' --notes '更新日期：2026-11-27。独立侧边栏、下载/转换/压缩工作区、系统工具菜单和快捷键；保留网页的纸感配色与品牌风格。适用于 Apple Silicon。临时签名，未 Apple 公证。'
+          gh release create v1.5.0 public/downloads/轻影_1.5.0_aarch64.dmg --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title '轻影 1.5.0 · 离线 AI 修复' --notes '更新日期：2026-11-27。内置 AI 推理引擎与模型，安装后可离线去字幕和水印；支持 8 个选区、预览与原音频保留，新增 ⌘4 修复工作区。适用于 Apple Silicon。临时签名，未 Apple 公证。'
