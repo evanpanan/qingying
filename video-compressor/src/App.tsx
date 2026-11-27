@@ -2,6 +2,8 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import StudioNav from './components/StudioNav'
 import Landing from './pages/Landing'
 import { useDesktopLinks } from './lib/desktop'
+import { isTauri } from './lib/env'
+import DesktopApp from './components/DesktopApp'
 import type { Page } from './types'
 
 const Converter = lazy(() => import('./pages/Convert'))
@@ -11,7 +13,7 @@ function currentPage(): Page {
   return ['home', 'download', 'convert', 'compress'].includes(name) ? name as Page : 'home'
 }
 
-function App() {
+function WebApp() {
   useDesktopLinks()
   const [page, setPage] = useState<Page>(currentPage)
   const [visited, setVisited] = useState<Set<Page>>(() => new Set([currentPage()]))
@@ -39,4 +41,7 @@ function App() {
   )
 }
 
-export default App
+export default function App() {
+  return isTauri() ? <DesktopApp /> : <WebApp />
+}
+

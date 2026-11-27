@@ -1886,7 +1886,7 @@ dependencies = [
 
 [[package]]
 name = "lightvid"
-version = "1.3.1"
+version = "1.4.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -5105,3 +5105,4 @@ checksum = "27bc9d5b815bc103f142aa054f561d9187d191692ec7c2d1e2b4737f8dbd7296"
 dependencies = [
  "zune-core",
 ]
+
