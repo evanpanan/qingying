@@ -179,10 +179,10 @@ npm run release:macos
 ```
 
 脚本先构建 App，再签名原生引擎和包资源、严格校验，最后创建并校验
-`public/downloads/轻影_1.3.1_aarch64.dmg`。这不是 Apple 开发者签名或公证。
+`https://github.com/evanpanan/qingying/releases/download/v1.4.0/轻影_1.4.0_aarch64.dmg`。这不是 Apple 开发者签名或公证。
 桌面运行检测使用 Tauri 2 官方接口，不依赖 `withGlobalTauri`；
 粘贴按钮使用原生剪贴板，转换/压缩支持原生文件拖放，仅当前可见工具接收文件；
-作者与源码链接通过系统浏览器打开。网页和桌面共用 App、首页、动画和品牌源文件。
+作者与源码链接通过系统浏览器打开。网页与桌面共用品牌样式和媒体处理组件；桌面使用独立工作台，默认进入下载，提供侧边栏、系统工具菜单与快捷键。
 
 Windows x64 在对应系统上构建：
 
@@ -227,7 +227,7 @@ UI 回归应覆盖默认自动播放、两排反向流动、悬停、离开后�
 
 ## 发布与限制
 
-新版 [macOS 1.3.1 DMG](public/downloads/轻影_1.3.1_aarch64.dmg)
+新版 [macOS 1.4.0 DMG](https://github.com/evanpanan/qingying/releases/download/v1.4.0/轻影_1.4.0_aarch64.dmg)
 包含 FFmpeg、自有 yt-dlp 与 Node.js，适用于 Apple Silicon，使用临时签名、未 Apple 公证。
 同步了新版 Logo、自动动效、粒子页脚和广覆盖解析。历史包不会随源码自动更新。
 当前未发布 Intel Mac 包，也未确认 Windows 包发布。
@@ -253,3 +253,8 @@ UI 回归应覆盖默认自动播放、两排反向流动、悬停、离开后�
 
 旧 `Home.tsx`、`Download.tsx` 和仓库 `website/` 不是当前首页入口。
 第三方引擎、GPL 分发要求和 LibreGet 参考范围见 [FEATURES.md](FEATURES.md#第三方)。
+
+
+## macOS 1.4.0（2026-11-27）
+
+独立桌面工作台保留网页的米白纸感、墨绿按钮、朱红 Logo 和字体。下载、转换与压缩使用原有处理组件，切换工具保持任务挂载。⌘1/2/3 切换工具，⌘L 聚焦下载链接。应用状态栏和官网下载入口显示版本及更新日期。安装包由 `.github/workflows/desktop-macos.yml` 在 Apple Silicon 构建机上构建，复用已发布 1.3.1 的便携原生引擎，校验签名、引擎运行及 App 启动后发布到 GitHub Releases。

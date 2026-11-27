@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/desktop-macos.yml
       - video-compressor/src-tauri/Cargo.toml
+      - video-compressor/src-tauri/Cargo.lock
 permissions:
   contents: write
 concurrency:
