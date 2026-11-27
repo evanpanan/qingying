@@ -5,6 +5,7 @@
 mod updater_tests;
 mod repair;
 mod library;
+mod update_location;
 
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader};
@@ -645,6 +646,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .invoke_handler(tauri::generate_handler![
+            update_location::update_location, update_location::update_open_applications,
             library::library_list, library::library_action, library::library_save,
             repair::repair_import, repair::repair_begin, repair::repair_upload, repair::repair_run, repair::repair_cancel, repair::repair_preview, repair::repair_save, repair::repair_discard,
             compress_video,

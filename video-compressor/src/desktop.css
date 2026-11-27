@@ -70,3 +70,8 @@
 .desktop-app[data-sidebar="false"] .desktop-statusbar {padding-left:140px;}
 
 .desktop-app[data-sidebar="false"] .desktop-sidebar-bottom {font-size:0;}
+
+.update-location-help {font-size:14px;line-height:1.8;padding:12px 15px;border:1px solid var(--line);border-radius:12px;background:#edf0e5;}
+.update-location-help ol {padding-left:22px;list-style:decimal;}
+.update-location-help small {display:block;overflow-wrap:anywhere;color:var(--muted);}
+.update-actions {flex-wrap:wrap;}

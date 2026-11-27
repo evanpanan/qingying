@@ -1987,7 +1987,7 @@ dependencies = [
 
 [[package]]
 name = "lightvid"
-version = "1.7.1"
+version = "1.7.2"
 dependencies = [
  "serde",
  "serde_json",
