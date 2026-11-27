@@ -20,6 +20,15 @@ jobs:
       run:
         working-directory: video-compressor
     steps:
+      - name: Require updater signing key
+        working-directory: .
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo 'Add TAURI_SIGNING_PRIVATE_KEY in repository Actions secrets before publishing signed updates.'
+            exit 1
+          fi
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -53,11 +62,14 @@ jobs:
       - run: npm test
       - run: cargo test --manifest-path src-tauri/Cargo.toml
       - name: Build and sign installer
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: npm run release:macos
       - name: Verify bundled engines, launch and media processing
         run: |
           app="$PWD/src-tauri/target/release/bundle/macos/轻影.app"
           codesign --verify --deep --strict --verbose=2 "$app"
+          LIGHTVID_UPDATE_ARCHIVE="$PWD/public/downloads/LightVid_1.7.0_aarch64.app.tar.gz" LIGHTVID_UPDATE_MANIFEST="$PWD/public/downloads/latest.json" cargo test --manifest-path src-tauri/Cargo.toml updater_tests::signed_update_rejects_tampering_and_replaces_only_app_bundle -- --exact
           for engine in ffmpeg yt-dlp node; do
             test -x "$app/Contents/MacOS/$engine"
             if otool -L "$app/Contents/MacOS/$engine" | grep -E '/opt/homebrew|/usr/local/'; then
@@ -78,12 +90,14 @@ jobs:
           pkill -x lightvid
       - uses: actions/upload-artifact@v4
         with:
-          name: LightVid-macOS-1.6.1
+          name: LightVid-macOS-1.7.0
           path: |
-            video-compressor/public/downloads/轻影_1.6.1_aarch64.dmg
+            video-compressor/public/downloads/轻影_1.7.0_aarch64.dmg
+            video-compressor/public/downloads/LightVid_*.app.tar.gz*
+            video-compressor/public/downloads/latest.json
             ${{ runner.temp }}/desktop-launch.png
       - name: Publish verified installer
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.6.1 public/downloads/轻影_1.6.1_aarch64.dmg --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title '轻影 1.6.1 · 本机视频翻译与修复历史' --notes '更新日期：2026-11-27。新增免费本机中文语音转英文配音和英文字幕，可叠加多选区修补；翻译模型首次自动下载约 350 MB，无需 API。处理结果自动保存历史，支持直接打开视频、所在文件夹和另存。添加修补选区按钮更醒目。翻译每次最多 60 秒、200 MB，叠加 AI 修复最多 20 秒；英文配音替换原音轨，机器翻译需检查。适用于 Apple Silicon。临时签名，未 Apple 公证。'
+          gh release create v1.7.0 public/downloads/轻影_1.7.0_aarch64.dmg public/downloads/LightVid_1.7.0_aarch64.app.tar.gz public/downloads/LightVid_1.7.0_aarch64.app.tar.gz.sig public/downloads/latest.json --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title '轻影 1.7.0 · 应用内更新' --notes '更新日期：2026-11-27。新增应用内更新：启动时自动检查，支持菜单或状态栏手动检查；下载后校验签名，点击安装并重启。处理任务结束后才能安装，保留历史和模型缓存。1.6.1 及更早版本需手动安装本版一次，之后可应用内升级。适用于 Apple Silicon。临时签名，未 Apple 公证。'

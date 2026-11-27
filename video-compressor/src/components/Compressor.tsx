@@ -1,3 +1,4 @@
+import {useDesktopTask} from '../lib/desktop-tasks'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Play,
@@ -40,6 +41,7 @@ export default function Compressor({ active = true }: { active?: boolean }) {
   const [settings, setSettings] = useState<CompressionSettings>(DEFAULT_SETTINGS)
   const [results, setResults] = useState<FileState[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
+  useDesktopTask(isProcessing)
   const inputMapRef = useRef<Map<string, CompressInput>>(new Map())
   const objectUrlsRef = useRef<string[]>([])
   const processingRef = useRef(false)
@@ -421,3 +423,4 @@ function FileRow({
 }
 
 function FileIconPlaceholder() { return <Play size={28} /> }
+

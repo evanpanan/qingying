@@ -1,6 +1,8 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+#[cfg(test)]
+mod updater_tests;
 mod repair;
 mod library;
 
@@ -616,14 +618,23 @@ pub fn run() {
                 &PredefinedMenuItem::separator(app)?,
             ])?;
             menu.append(&tools)?;
+            #[cfg(target_os="macos")]
+            if let Some(tauri::menu::MenuItemKind::Submenu(app_menu)) = menu.items()?.first() {
+                app_menu.insert(&MenuItem::with_id(app, "check-update", "检查更新…", true, None::<&str>)?, 1)?;
+            }
+            #[cfg(not(target_os="macos"))]
+            tools.append(&MenuItem::with_id(app, "check-update", "检查更新…", true, None::<&str>)?)?;
             Ok(menu)
         })
         .on_menu_event(|app, event| {
             let id = event.id().as_ref();
+            if id == "check-update" { let _ = app.emit("desktop:check-update", ()); }
             if matches!(id, "download" | "convert" | "compress" | "cleanup") {
                 let _ = app.emit("desktop:navigate", id);
             }
         })
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())

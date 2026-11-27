@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { Download, ArrowLeftRight, Minimize2, PanelLeft, Keyboard, Eraser } from 'lucide-react'
 import DownloadTool from './DownloadTool'
+import DesktopUpdater from './DesktopUpdater'
 import { useDesktopLinks } from '../lib/desktop'
 import '../desktop.css'
 
@@ -65,7 +66,7 @@ export default function DesktopApp() {
           {visited.has('compress') && <section hidden={page !== 'compress'} aria-label="视频压缩工作区"><div className="desktop-compressor legacy-tool"><Compress active={page === 'compress'} /></div></section>}
         </Suspense>
       </div>
-      <footer className="desktop-statusbar"><span>轻影 1.6.1 · 更新于 2026-11-27</span><span>切换工具可继续处理任务</span></footer>
+      <footer className="desktop-statusbar"><span>轻影 1.7.0 · 更新于 2026-11-27</span><DesktopUpdater /></footer>
     </section>
   </div>
 }

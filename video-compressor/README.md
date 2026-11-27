@@ -288,3 +288,14 @@ AI 引擎为 ONNX Runtime Node 1.23.2 CPU，LaMa FP32 模型随安装包附带�
 模型固定版本和许可证见 THIRD_PARTY_NOTICES.md。脚本 scripts/test-desktop-translation.mjs 使用仓库中的中文语音合成测试素材，在打包应用内真实运行识别、翻译、英文 TTS、区域修补和字幕合成，并检查输出音轨。
 
 [下载 macOS 1.6.1](https://github.com/evanpanan/qingying/releases/download/v1.6.1/_1.6.1_aarch64.dmg)。适用 Apple Silicon，更新于 2026-11-27。
+
+
+## 应用内更新（1.7.0）
+
+桌面版启动 5 秒后自动检查 GitHub Releases 的 latest.json，也可从状态栏或 macOS「轻影 → 检查更新…」手动检查。下载与安装分开：显示下载进度并验证 minisign 签名，通过后由用户点击「安装并重启」。有下载队列、解析、修复、转换、压缩任务时禁止安装。只替换应用本体，保留 app data / cache 内的修复历史和模型。网络、签名、权限错误会显示重试入口。1.6.1 及更早版本没有更新模块，需要手动安装 1.7.0 一次。
+
+更新使用官方 tauri-plugin-updater / process；HTTPS 固定到本仓库 GitHub Releases，requireSignedVersion 防止把旧包伪装成新版本。更新包在 macOS 应用及 sidecars 最终签名后创建，再用独立更新签名密钥签署。scripts/build-update.mjs 生成 .app.tar.gz、.sig 和 latest.json，发布工作流一起上传。与 Apple 公证为不同机制；目前 app 仍使用临时 Apple 签名。
+
+发布者需一次性在仓库 Settings → Secrets and variables → Actions 中添加 TAURI_SIGNING_PRIVATE_KEY（CLI 生成的私钥内容，无密码）；客户端只内置对应公钥。私钥不提交仓库，须安全备份，后续发布继续使用同一密钥。缺少密钥会在构建开始时明确失败，避免发布无法更新的版本。对新密钥重新生成公钥时，旧客户端无法验证新密钥签名，不应随意轮换。
+
+测试通过官方 updater 对签名测试包验签，拒绝损坏及版本不匹配的包，并在临时目录中真实替换测试 app、确认外部历史文件保留。发布前另验证正式更新包与客户端公钥匹配。

@@ -78,3 +78,7 @@ Whisper-small by OpenAI (MIT), https://github.com/openai/whisper . Quantized ONN
 Kokoro 82M v1.0 and kokoro-js 1.2.1 (hexgrad, Apache-2.0), https://github.com/hexgrad/kokoro . Quantized model: https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX , revision 1939ad2a8e416c0acfeecc08a694d14ef25f2231; SHA-256 fbae9257e1e05ffc727e951ef9b9c98418e6d79f1c9b6b13bd59f5c9028a1478. Only af_heart and am_michael voices are exposed. Speech weights are downloaded to local cache on first use, rather than bundled.
 
 phonemizer.js 1.2.1 (Xenova, Apache-2.0), https://github.com/xenova/phonemizer.js , includes eSpeak NG compiled to WebAssembly. eSpeak NG retains GPL-3.0-or-later, https://github.com/espeak-ng/espeak-ng . Sharp (Apache-2.0) / libvips (LGPL-2.1-or-later) render desktop captions; their bundled license files remain in node_modules. These dependencies retain their own distribution and corresponding-source requirements. The synthetic Chinese speech fixture under tests/fixtures is solely for automated pipeline verification.
+
+## In-app updater
+
+The desktop client uses the official Tauri updater and process plugins (MIT / Apache-2.0), https://github.com/tauri-apps/plugins-workspace . Update artifacts use the Tauri CLI minisign format and version-bound trusted comments; the client contains only the public verification key. The update signing key is independent from the app's macOS ad-hoc signature and is not distributed with the app or repository.

@@ -24,3 +24,6 @@ hdiutil create -volname "轻影 ${version}" -srcfolder "$staging" -format UDZO -
 hdiutil verify "$output"
 shasum -a 256 "$output"
 
+
+# The archive must contain the final signed app, not the earlier Tauri bundle.
+node "$root/scripts/build-update.mjs"

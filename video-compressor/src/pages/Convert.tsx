@@ -1,3 +1,4 @@
+import {useDesktopTask} from '../lib/desktop-tasks'
 import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, ArrowDown, Plus, FileVideo, Check, FolderOpen, X, ShieldCheck } from 'lucide-react'
 import { invoke } from '@tauri-apps/api/core'
@@ -16,6 +17,7 @@ export default function Converter({ active = true }: { active?: boolean }) {
   const [format, setFormat] = useState<OutputFormat>('mp4')
   const [jobs, setJobs] = useState<Job[]>([])
   const [busy, setBusy] = useState(false)
+  useDesktopTask(busy)
   const [error, setError] = useState('')
   const busyRef = useRef(false)
   const urls = useRef<string[]>([])

@@ -1,3 +1,4 @@
+import {useDesktopTask} from '../lib/desktop-tasks'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { ArrowDown, ArrowUpRight, Check, Clipboard, Link2, X, FolderOpen, History, RotateCcw, Clock3, Play, ChevronUp } from 'lucide-react'
 import { invoke } from '@tauri-apps/api/core'
@@ -72,6 +73,7 @@ export default function DownloadTool({ guidanceKey = 0 }: { guidanceKey?: number
   const fieldRef = useRef<HTMLTextAreaElement>(null)
   const platform = identifyPlatform(input)
   const ticking = busy || jobs.some(job => job.status === 'downloading' || job.status === 'queued')
+  useDesktopTask(ticking)
   useEffect(() => {
     if (!ticking) return
     const timer = window.setInterval(() => setClock(performance.now()), 200)
