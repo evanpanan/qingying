@@ -1,4 +1,4 @@
-import {readFile, writeFile} from 'node:fs/promises'
+import {readFile} from 'node:fs/promises'
 import {spawn} from 'node:child_process'
 import {once} from 'node:events'
 import {createHash} from 'node:crypto'
@@ -7,10 +7,10 @@ import {dirname, join} from 'node:path'
 const children=new Set()
 process.on('SIGTERM',()=>{for(const child of children)child.kill('SIGKILL');process.exit(130)})
 function emit(progress,text){process.stdout.write(JSON.stringify({progress,text})+'\n')}
-function launch(binary,args){
+export function launch(binary,args){
   const child=spawn(binary,['-hide_banner','-loglevel','error','-y',...args],{stdio:['pipe','pipe','pipe']});children.add(child);child.stdin.on('error',()=>{})
   let errors='';child.stderr.on('data',chunk=>{errors=(errors+chunk.toString()).slice(-8000)})
-  const done=new Promise((resolve,reject)=>{child.once('error',reject);child.once('close',code=>{children.delete(child);code===0?resolve():reject(new Error('视频处理失败：'+errors.slice(-1000)))})})
+  const done=new Promise((resolve,reject)=>{child.once('error',reject);child.once('close',code=>{children.delete(child);if(code===0)resolve();else reject(new Error('视频处理失败：'+errors.slice(-1000)))})})
   done.catch(()=>{});return {child,done}
 }
 function validate(spec){
@@ -18,7 +18,7 @@ function validate(spec){
   if(!spec.input||!spec.output||!spec.ffmpeg)throw new Error('缺少输入或输出')
   if(!Number.isFinite(spec.width)||!Number.isFinite(spec.height)||spec.width<8||spec.height<8)throw new Error('视频尺寸无效')
   if(spec.mode!=='subtitle-track'&&(!Array.isArray(spec.regions)||spec.regions.length<1||spec.regions.length>8||spec.regions.some(r=>![r.x,r.y,r.width,r.height].every(Number.isFinite)||r.x<0||r.y<0||r.width<=0||r.height<=0||r.x+r.width>1.000001||r.y+r.height>1.000001)))throw new Error('修补区域无效')
-  if(spec.mode==='ai'&&(!Number.isFinite(spec.start)||!Number.isFinite(spec.end)||spec.start<0||spec.end<=spec.start||spec.end-spec.start>20.001))throw new Error('AI 每次可处理最多 20 秒')
+  if(spec.mode==='ai'&&(!Number.isFinite(spec.start)||!Number.isFinite(spec.end)||spec.start<0||spec.end<=spec.start))throw new Error('请设置有效的处理起止时间')
 }
 function pixelRegion(r,width,height){const x=Math.max(1,Math.min(width-3,Math.round(r.x*width))),y=Math.max(1,Math.min(height-3,Math.round(r.y*height)));return {x,y,width:Math.max(1,Math.min(width-x-1,Math.round(r.width*width))),height:Math.max(1,Math.min(height-y-1,Math.round(r.height*height)))}}
 function dimensions(width,height){const scale=Math.min(1,1280/width,720/height);return {width:Math.max(2,Math.floor(width*scale/2)*2),height:Math.max(2,Math.floor(height*scale/2)*2)}}
@@ -50,30 +50,30 @@ export async function inpaintRGB(source,width,height,regions,session,ort){
   }
   return frame
 }
-export async function runRepair(spec){
+export async function runRepair(spec,onProgress=emit){
   validate(spec)
   if(spec.mode!=='ai'){
     const args=spec.preview?['-ss',String(spec.time||0),'-i',spec.input]:['-i',spec.input]
     if(spec.mode==='quick')args.push('-vf',spec.regions.map(r=>{const p=pixelRegion(r,spec.width,spec.height);return `delogo=x=${p.x}:y=${p.y}:w=${p.width}:h=${p.height}:show=0`}).join(','))
     if(spec.preview)args.push('-frames:v','1',spec.output)
-    else args.push('-map','0:v:0','-map','0:a?','-c:v',spec.mode==='subtitle-track'?'copy':'libx264',...(spec.mode==='quick'?['-crf','22','-preset','fast','-pix_fmt','yuv420p']:[]),'-c:a','aac','-sn','-movflags','+faststart',spec.output)
-    emit(10,'正在处理视频…');const task=launch(spec.ffmpeg,args);task.child.stdin.end();await task.done;emit(100,'处理完成');return
+    else args.push('-map','0:v:0','-map','0:a?','-c:v',spec.mode==='subtitle-track'?'copy':'libx264',...(spec.mode==='quick'?['-crf','22','-preset','fast','-pix_fmt','yuv420p']:[]),'-c:a','aac',...(spec.preserveSubtitles?['-map','0:s?','-c:s','mov_text']:['-sn']),'-movflags','+faststart',spec.output)
+    onProgress(10,'正在处理视频…');const task=launch(spec.ffmpeg,args);task.child.stdin.end();await task.done;onProgress(100,'处理完成');return
   }
   const root=dirname(fileURLToPath(import.meta.url)),model=await readFile(spec.model||join(root,'models/lama_fp32.onnx'))
   if(createHash('sha256').update(model).digest('hex')!=='1faef5301d78db7dda502fe59966957ec4b79dd64e16f03ed96913c7a4eb68d6')throw new Error('内置模型校验失败，请重新安装客户端')
-  emit(2,'正在加载内置 AI 引擎…')
+  onProgress(2,'正在加载内置 AI 引擎…')
   const ort=await import('onnxruntime-node'),session=await ort.InferenceSession.create(model,{executionProviders:['cpu'],intraOpNumThreads:4,graphOptimizationLevel:'all'})
   const {width,height}=dimensions(spec.width,spec.height),fps=12,length=spec.end-spec.start,total=spec.preview?1:Math.ceil(length*fps),start=spec.preview?(spec.time||0):spec.start
   const decode=launch(spec.ffmpeg,['-ss',String(start),'-i',spec.input,...(spec.preview?['-frames:v','1']:['-t',String(length)]),'-vf',`scale=${width}:${height},setsar=1,fps=${fps}`,'-an','-sn','-f','rawvideo','-pix_fmt','rgb24','pipe:1'])
   const args=['-f','rawvideo','-pix_fmt','rgb24','-s',`${width}x${height}`,'-r',String(fps),'-i','pipe:0']
   if(spec.preview)args.push('-frames:v','1',spec.output)
-  else args.push('-ss',String(spec.start),'-i',spec.input,'-map','0:v:0','-map','1:a?','-t',String(length),'-c:v','libx264','-crf','22','-preset','fast','-pix_fmt','yuv420p','-c:a','aac','-sn','-movflags','+faststart',spec.output)
+  else args.push('-ss',String(spec.start),'-i',spec.input,'-map','0:v:0','-map','1:a?','-t',String(length),'-c:v','libx264','-crf','22','-preset','fast','-pix_fmt','yuv420p','-c:a','aac',...(spec.preserveSubtitles?['-map','1:s?','-c:s','mov_text']:['-sn']),'-movflags','+faststart',spec.output)
   const encode=launch(spec.ffmpeg,args);decode.child.stdin.end();encode.child.stdout.resume()
-  const frameBytes=width*height*3;let buffer=Buffer.alloc(0),frames=0
+  const frameBytes=width*height*3;let buffer=Buffer.alloc(0),frames=0,previousInput=null,previousOutput=null
   try{
-    for await(const chunk of decode.child.stdout){buffer=buffer.length?Buffer.concat([buffer,chunk]):chunk;while(buffer.length>=frameBytes){const frame=await inpaintRGB(buffer.subarray(0,frameBytes),width,height,spec.regions,session,ort);buffer=buffer.subarray(frameBytes);if(!encode.child.stdin.write(frame))await once(encode.child.stdin,'drain');frames++;emit(Math.min(96,Math.round(frames/total*95)),`AI 修复 ${frames} / ${total} 帧 · ${spec.regions.length} 个选区`)}}
+    for await(const chunk of decode.child.stdout){buffer=buffer.length?Buffer.concat([buffer,chunk]):chunk;while(buffer.length>=frameBytes){const sourceFrame=buffer.subarray(0,frameBytes);let frame;if(previousInput&&sourceFrame.equals(previousInput))frame=previousOutput;else{frame=await inpaintRGB(sourceFrame,width,height,spec.regions,session,ort);previousInput=Buffer.from(sourceFrame);previousOutput=frame;}buffer=buffer.subarray(frameBytes);if(!encode.child.stdin.write(frame))await once(encode.child.stdin,'drain');frames++;onProgress(Math.min(96,Math.round(frames/total*95)),`AI 修复 ${frames} / ${total} 帧 · ${spec.regions.length} 个选区`)}}
     if(buffer.length||!frames)throw new Error('未能读取完整视频帧')
-    encode.child.stdin.end();await Promise.all([decode.done,encode.done]);emit(100,'AI 修复完成')
+    encode.child.stdin.end();await Promise.all([decode.done,encode.done]);onProgress(100,'AI 修复完成')
   }finally{decode.child.kill();encode.child.kill();await session.release()}
 }
 if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1]){

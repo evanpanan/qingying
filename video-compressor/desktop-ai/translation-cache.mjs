@@ -8,8 +8,8 @@ export const MODEL_FILES=[
  {...KOKORO,file:'onnx/model_quantized.onnx',size:92361116,sha:'fbae9257e1e05ffc727e951ef9b9c98418e6d79f1c9b6b13bd59f5c9028a1478'},
 ]
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex')
-export async function prepareTranslationModels(cacheDir,progress=()=>{}){
- for(const model of MODEL_FILES){
+export async function prepareTranslationModels(cacheDir,progress=()=>{},{dub=true}={}){
+ for(const model of MODEL_FILES.filter(model=>dub||model.id!==KOKORO.id)){
   const target=join(cacheDir,model.id,model.revision,model.file),parts=target+'.parts',size=4*1024*1024,total=Math.ceil(model.size/size)
   try{const bytes=await readFile(target);if(bytes.length===model.size&&hash(bytes)===model.sha)continue}catch{}
   await mkdir(parts,{recursive:true});let complete=0,next=0
@@ -38,5 +38,5 @@ export async function prepareTranslationModels(cacheDir,progress=()=>{}){
   await mkdir(dirname(target),{recursive:true});await rename(target+'.tmp',target);await rm(parts,{recursive:true,force:true})
  }
  // Only complete, parseable small model metadata files may be reused after a crash.
- for(const model of [WHISPER,KOKORO])for(const name of ['config.json','tokenizer.json','tokenizer_config.json','generation_config.json','preprocessor_config.json']){const path=join(cacheDir,model.id,model.revision,name);try{JSON.parse(await readFile(path,'utf8'))}catch{await rm(path,{force:true})}}
+ for(const model of (dub?[WHISPER,KOKORO]:[WHISPER]))for(const name of ['config.json','tokenizer.json','tokenizer_config.json','generation_config.json','preprocessor_config.json']){const path=join(cacheDir,model.id,model.revision,name);try{JSON.parse(await readFile(path,'utf8'))}catch{await rm(path,{force:true})}}
 }

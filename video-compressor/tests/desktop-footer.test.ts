@@ -43,7 +43,7 @@ test('页脚使用 Dissolve 礼花、中文反馈和动画偏好保护', () => {
 
 test('新版网站下载入口与桌面版本一致', () => {
   const config = JSON.parse(source('src-tauri/tauri.conf.json'))
-  assert.equal(config.version, '1.7.2')
+  assert.equal(config.version, '1.8.0')
   assert(source('src/pages/Landing.tsx').includes(`https://github.com/evanpanan/qingying/releases/download/v${config.version}/_${config.version}_aarch64.dmg`))
   assert(source('src-tauri/Cargo.toml').includes(`version = "${config.version}"`))
 })
@@ -53,8 +53,8 @@ test('AI 修复有桌面入口、系统菜单和打包模型，网页只提示�
   assert.match(source('src/components/DesktopApp.tsx'), /id: 'cleanup'/)
   assert.match(source('src-tauri/src/main.rs'), /CmdOrCtrl\+2/)
   const repair = source('src/pages/Cleanup.tsx')
-  assert.match(repair, /使用 AI 修复需要下载桌面版/)
-  assert.match(repair, /mode!=='ai'\|\|native/)
+  assert.match(repair, /AI 画面修复需要桌面版/)
+  assert.match(source('src/lib/cleanup-state.ts'), /AI 画面修复需要桌面版/)
   assert.doesNotMatch(repair, /loadRepairModel|\.onnx|MODEL_URL/)
   const config = JSON.parse(source('src-tauri/tauri.conf.json'))
   assert.equal(config.bundle.resources['../desktop-ai/'], 'desktop-ai/')

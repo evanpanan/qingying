@@ -11,10 +11,10 @@ pub fn remember(app:&tauri::AppHandle,source:&Path,title:&str,kind:&str)->Result
  let _guard=LOCK.lock().map_err(|_|"历史记录不可用")?;let dir=root(app)?;remember_in(&dir,source,title,kind)
 }
 fn remember_in(dir:&Path,source:&Path,title:&str,kind:&str)->Result<String,String>{
- let dir=dir.to_path_buf();fs::create_dir_all(&dir).map_err(|e|e.to_string())?;let timestamp=SystemTime::now().duration_since(UNIX_EPOCH).map_err(|e|e.to_string())?;let id=timestamp.as_nanos().to_string();let label=if kind=="translate"{"english"}else{"repaired"};let filename=format!("{}_{}_{}.mp4",safe_name(title),label,id);let target=dir.join(filename);
+ let dir=dir.to_path_buf();fs::create_dir_all(&dir).map_err(|e|e.to_string())?;let timestamp=SystemTime::now().duration_since(UNIX_EPOCH).map_err(|e|e.to_string())?;let id=timestamp.as_nanos().to_string();let label=if kind.starts_with("translate"){"english"}else{"repaired"};let filename=format!("{}_{}_{}.mp4",safe_name(title),label,id);let target=dir.join(filename);
  fs::copy(source,&target).map_err(|e|e.to_string())?;let bytes=fs::metadata(&target).map_err(|e|e.to_string())?.len();
  let record=Record{id:id.clone(),title:if title.is_empty(){"视频".into()}else{title.into()},kind:kind.into(),created_at:timestamp.as_secs(),bytes,path:target.to_string_lossy().into(),saved_path:None,exists:true};
- let sidecar=source.with_extension("srt");if kind=="translate"&&sidecar.is_file(){fs::copy(sidecar,target.with_extension("srt")).map_err(|e|e.to_string())?;}
+ let sidecar=source.with_extension("srt");if kind.starts_with("translate")&&sidecar.is_file(){fs::copy(sidecar,target.with_extension("srt")).map_err(|e|e.to_string())?;}
  let mut all=records(&dir);all.insert(0,record);if let Err(error)=write(&dir,&all){let _=fs::remove_file(target);return Err(error)}Ok(id)
 }
 pub fn migrate_legacy(app:&tauri::AppHandle){

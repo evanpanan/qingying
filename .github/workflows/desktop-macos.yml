@@ -69,7 +69,7 @@ jobs:
         run: |
           app="$PWD/src-tauri/target/release/bundle/macos/轻影.app"
           codesign --verify --deep --strict --verbose=2 "$app"
-          LIGHTVID_UPDATE_ARCHIVE="$PWD/public/downloads/LightVid_1.7.2_aarch64.app.tar.gz" LIGHTVID_UPDATE_MANIFEST="$PWD/public/downloads/latest.json" cargo test --manifest-path src-tauri/Cargo.toml updater_tests::signed_update_rejects_tampering_and_replaces_only_app_bundle -- --exact
+          LIGHTVID_UPDATE_ARCHIVE="$PWD/public/downloads/LightVid_1.8.0_aarch64.app.tar.gz" LIGHTVID_UPDATE_MANIFEST="$PWD/public/downloads/latest.json" cargo test --manifest-path src-tauri/Cargo.toml updater_tests::signed_update_rejects_tampering_and_replaces_only_app_bundle -- --exact
           for engine in ffmpeg yt-dlp node; do
             test -x "$app/Contents/MacOS/$engine"
             if otool -L "$app/Contents/MacOS/$engine" | grep -E '/opt/homebrew|/usr/local/'; then
@@ -90,9 +90,9 @@ jobs:
           pkill -x lightvid
       - uses: actions/upload-artifact@v4
         with:
-          name: LightVid-macOS-1.7.2
+          name: LightVid-macOS-1.8.0
           path: |
-            video-compressor/public/downloads/轻影_1.7.2_aarch64.dmg
+            video-compressor/public/downloads/轻影_1.8.0_aarch64.dmg
             video-compressor/public/downloads/LightVid_*.app.tar.gz*
             video-compressor/public/downloads/latest.json
             ${{ runner.temp }}/desktop-launch.png
@@ -100,4 +100,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.7.2 public/downloads/轻影_1.7.2_aarch64.dmg public/downloads/LightVid_1.7.2_aarch64.app.tar.gz public/downloads/LightVid_1.7.2_aarch64.app.tar.gz.sig public/downloads/latest.json --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title '轻影 1.7.2 · 更新安装位置检测' --notes '更新日期：2026-11-28。下载和安装更新前检测只读安装镜像与 App Translocation，明确提示移至应用程序并重新打开。安装失败后保留已下载更新包，可直接重试安装，不再把位置或权限错误误导为重新下载。适用于 Apple Silicon。临时签名，未 Apple 公证。'
+          gh release create v1.8.0 public/downloads/轻影_1.8.0_aarch64.dmg public/downloads/LightVid_1.8.0_aarch64.app.tar.gz public/downloads/LightVid_1.8.0_aarch64.app.tar.gz.sig public/downloads/latest.json --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title '轻影 1.8.0 · 按需处理与完整视频' --notes '更新日期：2026-11-28。重新整理去字幕水印、只换字幕、只换配音、字幕配音四种用途。字幕区和水印区可分别处理；只换字幕保留原声音，只换配音保留原画面与字幕。添加选区移到视频旁上方。桌面取消固定时长及文件大小上限，AI 逐帧处理，语音按段识别合成并自动合并；实际耗时和空间取决于设备。新增紧凑平台提示、醒目版本和创作者推特入口。适用于 Apple Silicon。临时签名，未 Apple 公证。'

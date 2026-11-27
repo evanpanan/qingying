@@ -169,6 +169,7 @@ export default function DownloadTool({ guidanceKey = 0 }: { guidanceKey?: number
         <button className="quiet-button" disabled={busy} onClick={async () => { try { setInput(await readClipboard()); fieldRef.current?.focus() } catch { setError('未允许读取剪贴板，请直接粘贴链接') } }}><Clipboard size={16} />粘贴</button>
         <span className="detected-platform">{platform?.name || '自动识别平台'}</span>
       </div>
+      <p className="download-platforms"><span>主要平台</span>抖音 · 小红书 · B站 · 快手 · YouTube · TikTok · X · Instagram</p>
       {(busy || parseMs !== null) && <p className="parse-timing" role="status"><Clock3 size={13} />{busy ? '解析中' : error ? '本次解析用时' : '解析完成'} · {formatElapsed(busy ? Math.max(0, clock - parseStarted) : parseMs ?? 0)}</p>}
       {error && <p className="tool-error" role="alert">{error}</p>}
       {data && <div className="download-result reveal">

@@ -11,6 +11,6 @@ export async function browserResultAction(record:ResultRecord,action:'open'|'sav
  try{item=await new Promise((resolve,reject)=>{const request=db.transaction('results').objectStore('results').get(record.id);request.onsuccess=()=>request.result?resolve(request.result):reject(new Error('浏览器记录已清除，请重新处理'));request.onerror=()=>reject(request.error)})}finally{db.close()}
  const url=URL.createObjectURL(item.blob)
  if(action==='open'){const anchor=document.createElement('a');anchor.href=url;anchor.target='_blank';anchor.rel='noopener';anchor.click()}
- else{const anchor=document.createElement('a');anchor.href=url;anchor.download=record.title.replace(/\.[^.]+$/,'')+(record.kind==='translate'?'_english':'_repaired')+'.mp4';anchor.click()}
+ else{const anchor=document.createElement('a');anchor.href=url;anchor.download=record.title.replace(/\.[^.]+$/,'')+(record.kind.startsWith('translate')?'_english':'_repaired')+'.mp4';anchor.click()}
  setTimeout(()=>URL.revokeObjectURL(url),60000)
 }

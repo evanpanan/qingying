@@ -1,8 +1,8 @@
 [package]
 name = "lightvid"
-version = "1.7.2"
-description = "轻影 - 视频下载、格式转换与压缩"
-authors = ["you"]
+version = "1.8.0"
+description = "轻影 - 视频下载、画面修复、字幕配音、转换与压缩"
+authors = ["Cooper"]
 edition = "2021"
 
 [build-dependencies]

@@ -5,7 +5,7 @@ import {resolve,join} from 'node:path'
 export function manifest(version,signature,date=new Date().toISOString()){
  if(!/^\d+\.\d+\.\d+$/.test(version))throw Error('发布版本无效')
  if(!signature.trim()||!/^[A-Za-z0-9+/=\s]+$/.test(signature))throw Error('缺少有效更新签名')
- return {version,notes:'更新前检测只读安装镜像和临时隔离位置，提示先移至应用程序。安装失败保留更新包，可直接重试安装，无需反复下载。保留处理历史与模型缓存。',pub_date:date,platforms:{'darwin-aarch64':{signature:signature.trim(),url:`https://github.com/evanpanan/qingying/releases/download/v${version}/LightVid_${version}_aarch64.app.tar.gz`}}}
+ return {version,notes:'按需选择去字幕水印、只换字幕、只换配音或字幕配音。添加选区移至视频旁上方；桌面支持完整视频，无固定时长或文件大小上限。字幕区域、水印区域可独立选择。新增紧凑平台提示、版本和创作者推特入口。',pub_date:date,platforms:{'darwin-aarch64':{signature:signature.trim(),url:`https://github.com/evanpanan/qingying/releases/download/v${version}/LightVid_${version}_aarch64.app.tar.gz`}}}
 }
 if(process.argv[1]&&resolve(process.argv[1])===new URL(import.meta.url).pathname){
  const key=process.env.TAURI_SIGNING_PRIVATE_KEY;if(!key)throw Error('缺少 TAURI_SIGNING_PRIVATE_KEY，请在 GitHub Actions Secrets 中配置')

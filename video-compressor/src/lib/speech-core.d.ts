@@ -7,7 +7,7 @@ declare module '*translation-core.mjs' {
  export function timedText(output:unknown,duration:number):SpeechRow[]
  export function wrapCaption(text:string,max?:number):string[]
  export function subtitles(rows:SpeechRow[]):string
- export function translateSpeech(samples:Float32Array,duration:number,options?:{node?:boolean;cacheDir?:string;voice?:string;progress?:(text:string)=>void;check?:()=>void}):Promise<{rows:SpeechRow[];audio:{samples:Float32Array;rate:number}[]}>
+ export function translateSpeech(samples:Float32Array,duration:number,options?:{dub?:boolean;allowEmpty?:boolean;node?:boolean;cacheDir?:string;voice?:string;progress?:(text:string)=>void;check?:()=>void}):Promise<{rows:SpeechRow[];audio:{samples:Float32Array;rate:number}[]}>
 }
 declare module '*translation-render.mjs' {
  export function tempoFilter(ratio:number):string

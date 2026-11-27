@@ -24,10 +24,16 @@ test('本机模型断点续传并在校验后替换缓存，错误分段不能�
  try{
   MODEL_FILES.splice(0,MODEL_FILES.length,model)
   const target=join(directory,model.id,model.revision,model.file);await mkdir(dirname(target),{recursive:true});await writeFile(target,bytes.subarray(0,4*1024*1024));let requests=0
-  globalThis.fetch=async(_input,init)=>{requests++;const range=(init?.headers as Record<string,string>).Range;assert.equal(range,`bytes=4194304-${bytes.length-1}`);return new Response(bytes.subarray(4194304),{status:206,headers:{'Content-Range':`bytes 4194304-${bytes.length-1}/${bytes.length}`}})}
+  globalThis.fetch=async(_input,init)=>{requests++;const range=(init?.headers as Record<string,string> | undefined)?.Range;assert.equal(range,`bytes=4194304-${bytes.length-1}`);return new Response(bytes.subarray(4194304),{status:206,headers:{'Content-Range':`bytes 4194304-${bytes.length-1}/${bytes.length}`}})}
   await prepareTranslationModels(directory);assert.equal(requests,1);assert.deepEqual(await readFile(target),bytes)
   await prepareTranslationModels(directory);assert.equal(requests,1)
   await rm(target);globalThis.fetch=async()=>new Response('broken',{status:206,headers:{'Content-Range':'bytes 0-2/3'}})
   await assert.rejects(prepareTranslationModels(directory));await assert.rejects(readFile(target))
  }finally{globalThis.fetch=fetch;MODEL_FILES.splice(0,MODEL_FILES.length,...saved);await rm(directory,{recursive:true,force:true})}
+})
+
+import {translationSegments} from '../desktop-ai/translate.mjs'
+test('长视频自动分段并保留全局字幕偏移，末段不会截断或重叠',()=>{
+ assert.deepEqual(translationSegments(10,135),[{start:10,end:70,offset:0},{start:70,end:130,offset:60},{start:130,end:135,offset:120}])
+ assert.equal(translationSegments(0,3600).length,60);assert.throws(()=>translationSegments(5,4));assert.throws(()=>translationSegments(0,Infinity))
 })
