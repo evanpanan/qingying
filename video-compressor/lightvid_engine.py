@@ -124,6 +124,11 @@ class PublicRH(UrllibRH):
 
 
 class LightVidDL(yt_dlp.YoutubeDL):
+    def add_default_info_extractors(self):
+        from lightvid_xiaohongshu import LightVidXiaoHongShuIE
+        self.add_info_extractor(LightVidXiaoHongShuIE(self))
+        super().add_default_info_extractors()
+
     def build_request_director(self, handlers, preferences=None):
         # No fallback to requests/curl/impersonation or file/FTP handlers.
         director = super().build_request_director([PublicRH])
@@ -144,3 +149,4 @@ def engine_info():
         "generic": True,
         "thirdPartyParser": False,
     }
+

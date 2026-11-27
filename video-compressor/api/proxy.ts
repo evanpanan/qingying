@@ -14,6 +14,12 @@ const UA =
 const DOUYIN_HOST = /(^|\.)(douyinpic|douyinvod|douyin|iesdouyin)\.com$/
 const DOUYIN_REFERER = 'https://www.douyin.com/'
 
+export function mediaReferer(host: string): string | undefined {
+  if (DOUYIN_HOST.test(host)) return DOUYIN_REFERER
+  if (/(^|\.)xhscdn\.com$/.test(host)) return 'https://www.xiaohongshu.com/'
+  return undefined
+}
+
 const PASS_HEADERS = [
   'content-type',
   'content-length',
@@ -90,9 +96,8 @@ export default async function handler(req: any, res: any) {
     let upstream: IncomingMessage | undefined
     const signal = AbortSignal.timeout(280000)
     for (let hop = 0; hop < 6; hop++) {
-      const hopHeaders = DOUYIN_HOST.test(current.url.hostname)
-        ? { ...headers, Referer: DOUYIN_REFERER }
-        : headers
+      const referer = mediaReferer(current.url.hostname)
+      const hopHeaders = referer ? { ...headers, Referer: referer } : headers
       upstream = await openPublic(current, hopHeaders, signal)
       if (![301, 302, 303, 307, 308].includes(upstream.statusCode || 0)) break
       const location = upstream.headers.location
@@ -139,3 +144,4 @@ export default async function handler(req: any, res: any) {
     else res.status(502).json({ ok: false, error: e?.message || '媒体代理请求失败' })
   }
 }
+

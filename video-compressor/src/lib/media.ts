@@ -2,7 +2,7 @@ export const PLATFORMS = [
   { name: 'YouTube', hosts: ['youtube.com', 'youtu.be'], engine: 'extract' },
   { name: '抖音', hosts: ['douyin.com', 'iesdouyin.com'], engine: 'extract' },
   { name: 'Instagram', hosts: ['instagram.com', 'instagr.am'], engine: 'extract' },
-  { name: '小红书', hosts: ['xiaohongshu.com', 'xhslink.com'], engine: 'extract' },
+  { name: '小红书', hosts: ['xiaohongshu.com', 'xhslink.com', 'rednote.com'], engine: 'extract' },
   { name: '快手', hosts: ['kuaishou.com', 'gifshow.com'], engine: 'extract' },
   { name: 'X', hosts: ['x.com', 'twitter.com', 't.co'], engine: 'extract' },
   { name: 'Bilibili', hosts: ['bilibili.com', 'b23.tv'], engine: 'extract' },
@@ -64,6 +64,8 @@ export function shareUrl(text: string): string {
   if (!match) throw new Error('请粘贴包含链接的分享文案')
   const url = new URL(match[0])
   const host = url.hostname.toLowerCase().replace(/\.$/, '')
+  if (url.protocol === 'http:' && ['xhslink.com', 'www.xhslink.com'].includes(host) &&
+      !url.port && !url.username && !url.password) url.protocol = 'https:'
   if (url.protocol !== 'https:' || url.username || url.password ||
       (url.port && url.port !== '443') || !host.includes('.') ||
       /^[\d.]+$/.test(host) || host.includes(':') ||
@@ -122,3 +124,4 @@ export interface EngineInfo {
   generic: boolean
   thirdPartyParser: boolean
 }
+

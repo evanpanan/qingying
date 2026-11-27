@@ -57,3 +57,12 @@ test('媒体代理拒绝本机资源和非 HTTPS', async () => {
     assert.equal(res.data.ok, false)
   }
 })
+
+
+test('小红书 HTTP 分享短链升为 HTTPS 且保留签名，支持 rednote 域名', () => {
+  assert.equal(shareUrl('分享 http://xhslink.com/o/abc?xsec_token=a%2Fb%3D&xsec_source=app_share 复制'), 'https://xhslink.com/o/abc?xsec_token=a%2Fb%3D&xsec_source=app_share')
+  assert.equal(identifyPlatform('https://www.rednote.com/explore/674051740000000007027a15')?.name, '小红书')
+  assert.throws(() => shareUrl('http://xhslink.com.attacker.example/o/a'))
+  assert.throws(() => shareUrl('http://u:p@xhslink.com/o/a'))
+  assert.throws(() => shareUrl('http://xhslink.com:8080/o/a'))
+})

@@ -68,3 +68,19 @@ class ExtractTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class XhsExtractTests(unittest.TestCase):
+    def test_http_short_entry_upgrades_and_complete_stream_is_returned(self):
+        with patch.object(module,'LightVidDL') as dl:
+            dl.return_value.__enter__.return_value.extract_info.return_value={
+                'extractor_key':'LightVidXiaoHongShu','title':'小红书视频','formats':[
+                    {'url':'https://sns-video-bd.xhscdn.com/video.mp4?sign=a%2Fb','ext':'mp4','vcodec':'h264','acodec':'aac','height':1080}]}
+            result=module.extract('http://xhslink.com/o/a?xsec_token=a%2Fb%3D')
+            dl.return_value.__enter__.return_value.extract_info.assert_called_once_with('https://xhslink.com/o/a?xsec_token=a%2Fb%3D',download=False)
+            self.assertEqual(result['platformName'],'小红书')
+            self.assertEqual(result['type'],'video')
+    def test_expired_or_gated_note_has_actionable_error(self):
+        message=module.error_message(Exception('ERROR: [LightVidXiaoHongShu] 小红书未返回作品'))
+        self.assertIn('xsec_token',message)
+        self.assertIn('登录',message)

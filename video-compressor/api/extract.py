@@ -8,12 +8,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from lightvid_engine import LightVidDL, engine_info, validate_url
 from lightvid_douyin import douyin_extract, is_douyin
+from lightvid_xiaohongshu import normalize_share_url
 
 
 def error_message(error):
     message = str(error)
     if isinstance(error, ValueError):
         return message
+    if "小红书" in message:
+        return "小红书解析失败：请从 App 重新复制完整公开视频链接（保留 xsec_token）；作品可能需要登录、验证或已删除"
     if "Unsupported URL" in message:
         return "自有引擎未找到此页面的视频，请使用单个作品链接"
     if any(word in message.lower() for word in ("timed out", "timeout")):
@@ -25,6 +28,7 @@ def error_message(error):
 
 
 def extract(url):
+    url = normalize_share_url(url)
     host = validate_url(url, entry=True)
     if is_douyin(host):
         # 抖音网页接口需要签名风控，这里走轻影自己的抖音解析。
@@ -83,7 +87,7 @@ def extract(url):
     if not formats:
         raise ValueError("此作品没有可直接下载的完整文件，请使用桌面版合并视频与音频")
     return {
-        "platformName": info.get("extractor_key") or host, "title": info.get("title"),
+        "platformName": "小红书" if info.get("extractor_key") == "LightVidXiaoHongShu" else info.get("extractor_key") or host, "title": info.get("title"),
         "author": info.get("uploader"), "url": formats[0]["url"],
         "type": "audio" if formats[0]["audioOnly"] else "video",
         "formats": formats[:16],
@@ -126,3 +130,4 @@ if __name__ == "__main__":
             print(json.dumps({"ok": True, "data": extract(json.loads(sys.stdin.read())["url"])}))
     except Exception as error:
         print(json.dumps({"ok": False, "error": error_message(error)}))
+
