@@ -1,7 +1,7 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
 import { spawn } from 'node:child_process'
-import { rmSync } from 'node:fs'
+import { rmSync, readdirSync, mkdirSync, copyFileSync, createReadStream } from 'node:fs'
 import { resolve } from 'node:path'
 
 /**
@@ -109,9 +109,56 @@ function desktopAssets(): Plugin {
   }
 }
 
+
+/** Serve AI runtime files locally; models are downloaded only on user action. */
+function repairRuntimeAssets(): Plugin {
+  const root = resolve('node_modules/onnxruntime-web/dist')
+  const allowed = (name: string) => /^ort-wasm-simd-threaded(?:\.(?:jsep|asyncify))?\.(?:mjs|wasm)$/.test(name)
+  return {
+    name: 'lightvid-repair-runtime',
+    configureServer(server) {
+      server.middlewares.use('/ort', (req, res, next) => {
+        const name = (req.url || '').split('?')[0].replace(/^\//, '')
+        if (!allowed(name)) return next()
+        res.setHeader('Content-Type', name.endsWith('.wasm') ? 'application/wasm' : 'text/javascript')
+        createReadStream(resolve(root, name)).on('error', () => { res.statusCode = 404; res.end() }).pipe(res)
+      })
+    },
+    closeBundle() {
+      mkdirSync(resolve('dist/ort'), { recursive: true })
+      for (const name of readdirSync(root).filter(allowed)) copyFileSync(resolve(root, name), resolve('dist/ort', name))
+    },
+  }
+}
+
+function localVideoEngine(): Plugin {
+  const roots: Record<string, string> = {
+    '/ffmpeg-core': resolve('node_modules/@ffmpeg/core/dist/esm'),
+    '/ffmpeg-worker': resolve('node_modules/@ffmpeg/ffmpeg/dist/esm'),
+  }
+  return {
+    name: 'lightvid-local-video-engine',
+    configureServer(server) {
+      for (const [prefix, root] of Object.entries(roots)) server.middlewares.use(prefix, (req, res, next) => {
+        const name = (req.url || '').split('?')[0].replace(/^\//, '')
+        if (!/^[a-zA-Z0-9_.-]+\.(?:js|wasm)$/.test(name)) return next()
+        res.setHeader('Content-Type', name.endsWith('.wasm') ? 'application/wasm' : 'text/javascript')
+        createReadStream(resolve(root, name)).on('error', () => { res.statusCode = 404; res.end() }).pipe(res)
+      })
+    },
+    closeBundle() {
+      for (const [prefix, root] of Object.entries(roots)) {
+        const target = resolve('dist' + prefix)
+        mkdirSync(target, { recursive: true })
+        for (const name of readdirSync(root).filter(name => /\.(?:js|wasm)$/.test(name))) copyFileSync(resolve(root, name), resolve(target, name))
+      }
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), apiDevServer(), desktopAssets()],
+  plugins: [react(), apiDevServer(), desktopAssets(), repairRuntimeAssets(), localVideoEngine()],
   // Tauri expects the dev server on port 1420
   server: {
     port: 1420,
@@ -127,3 +174,4 @@ export default defineConfig({
   clearScreen: false,
   envPrefix: ['VITE_', 'TAURI_'],
 })
+

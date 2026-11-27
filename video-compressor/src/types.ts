@@ -1,5 +1,5 @@
 /** Web 端路由页面。 */
-export type Page = 'home' | 'compress' | 'download' | 'convert' | 'desktop'
+export type Page = 'home' | 'compress' | 'download' | 'convert' | 'cleanup' | 'desktop'
 
 export type QualityPreset = 'lossless' | 'high' | 'standard' | 'high-compress'
 
@@ -45,3 +45,4 @@ export interface CompressionResult {
   progress: number
   error?: string
 }
+

@@ -17,6 +17,7 @@
     "release:macos": "bash scripts/package-macos.sh"
   },
   "dependencies": {
+    "@ffmpeg/core": "^0.12.6",
     "@ffmpeg/ffmpeg": "^0.12.10",
     "@ffmpeg/util": "^0.12.1",
     "@tauri-apps/api": "^2.12.3",
@@ -26,6 +27,7 @@
     "embla-carousel-auto-scroll": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "lucide-react": "^1.57.0",
+    "onnxruntime-web": "^1.23.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

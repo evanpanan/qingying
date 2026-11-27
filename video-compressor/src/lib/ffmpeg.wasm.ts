@@ -1,12 +1,11 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg'
-import { fetchFile, toBlobURL } from '@ffmpeg/util'
+import { fetchFile } from '@ffmpeg/util'
 import type { CompressionSettings } from '../types'
 import { QUALITY_OPTIONS, RESOLUTION_OPTIONS } from './constants'
 import { FORMATS, type OutputFormat } from './media'
 
-// FFmpeg core CDN (single-threaded version, no COOP/COEP needed)
-const FFMPEG_CORE_VERSION = '0.12.6'
-const FFMPEG_CORE_URL = `https://unpkg.com/@ffmpeg/core@${FFMPEG_CORE_VERSION}/dist/esm`
+// Same-origin single-threaded core; no COOP/COEP or external CDN is required.
+const FFMPEG_CORE_URL = '/ffmpeg-core'
 
 let ffmpegInstance: FFmpeg | null = null
 let isLoading = false
@@ -29,11 +28,20 @@ async function getFfmpeg(): Promise<FFmpeg> {
   try {
     const ffmpeg = new FFmpeg()
 
-    const baseURL = FFMPEG_CORE_URL
-    await ffmpeg.load({
-      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-    })
+    const baseURL = new URL(FFMPEG_CORE_URL + '/', window.location.href).href
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(new Error('视频处理内核加载超时，请刷新页面后重试')), 45000)
+    try {
+      await ffmpeg.load({
+        classWorkerURL: '/ffmpeg-worker/worker.js',
+        coreURL: `${baseURL}ffmpeg-core.js`,
+        wasmURL: `${baseURL}ffmpeg-core.wasm`,
+      }, { signal: controller.signal })
+    } catch (error) {
+      ffmpeg.terminate()
+      throw error
+    } finally { clearTimeout(timer) }
+
 
     ffmpegInstance = ffmpeg
     return ffmpeg
@@ -154,4 +162,18 @@ async function executeJob(file: File, format: OutputFormat, args: string[], onPr
     ffmpeg.off('log', onLog)
     await Promise.all([ffmpeg.deleteFile(inputName).catch(() => undefined), ffmpeg.deleteFile(outputName).catch(() => undefined)])
   }
+}
+
+
+/** Serialize advanced frame jobs with conversion/compression on the same engine. */
+export function withWasmEngine<T>(task: (ffmpeg: FFmpeg) => Promise<T>): Promise<T> {
+  const job = jobQueue.then(async () => task(await getFfmpeg()))
+  jobQueue = job.catch(() => undefined)
+  return job
+}
+export function repairVideoWasm(file: File, args: string[], onProgress: (value: number) => void) {
+  return runWasmJob(file, 'mp4', args, onProgress).catch((error: unknown) => {
+    if (error instanceof Error && error.message.startsWith('转换失败')) throw new Error('修补失败，请检查选区是否覆盖在画面内；不兼容的格式可先转换为 MP4')
+    throw error
+  })
 }
