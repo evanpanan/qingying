@@ -5,7 +5,7 @@ import {resolve,join} from 'node:path'
 export function manifest(version,signature,date=new Date().toISOString()){
  if(!/^\d+\.\d+\.\d+$/.test(version))throw Error('发布版本无效')
  if(!signature.trim()||!/^[A-Za-z0-9+/=\s]+$/.test(signature))throw Error('缺少有效更新签名')
- return {version,notes:'修复去水印编辑区留白：时间轴与精确调整紧随视频，选区时间并排设置，压缩选区工具间距。官网按需功能改为左侧动画右侧文案，持续轮换、鼠标悬停响应，移除暂停按钮，展开也保持紧凑。',pub_date:date,platforms:{'darwin-aarch64':{signature:signature.trim(),url:`https://github.com/evanpanan/qingying/releases/download/v${version}/LightVid_${version}_aarch64.app.tar.gz`}}}
+ return {version,notes:'画出的选区全部按各自时间范围修补，移除字幕与水印二次勾选，不再自动添加选区。处理预览跟随真实时间：AI 修复回传实际已修复画面，快速修补显示原片进度。官网按参考站精确重做卡片尺寸、抽出退后轨迹及悬停展开，保持左动画右文案。',pub_date:date,platforms:{'darwin-aarch64':{signature:signature.trim(),url:`https://github.com/evanpanan/qingying/releases/download/v${version}/LightVid_${version}_aarch64.app.tar.gz`}}}
 }
 if(process.argv[1]&&resolve(process.argv[1])===new URL(import.meta.url).pathname){
  const key=process.env.TAURI_SIGNING_PRIVATE_KEY;if(!key)throw Error('缺少 TAURI_SIGNING_PRIVATE_KEY，请在 GitHub Actions Secrets 中配置')

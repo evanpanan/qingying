@@ -1,0 +1,9 @@
+import assert from 'node:assert/strict'
+import {mkdtemp,writeFile,readFile,rm} from 'node:fs/promises'
+import {spawnSync} from 'node:child_process'
+import {tmpdir} from 'node:os'
+import {join,resolve,dirname} from 'node:path'
+import {fileURLToPath} from 'node:url'
+const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),app=process.env.LIGHTVID_APP,node=app?join(app,'Contents/MacOS/node'):process.execPath,ffmpeg=app?join(app,'Contents/MacOS/ffmpeg'):'/opt/homebrew/bin/ffmpeg',runtime=app?join(app,'Contents/Resources/desktop-ai'):join(root,'desktop-ai'),dir=await mkdtemp(join(tmpdir(),'lightvid-live-'))
+function run(bin,args){const r=spawnSync(bin,args,{encoding:'utf8',timeout:120000,maxBuffer:4*1024*1024});assert.equal(r.status,0,r.stderr||r.error?.message);return r.stdout}
+try{const input=join(dir,'source.mp4');run(ffmpeg,['-v','error','-y','-f','lavfi','-i','color=c=gray:s=160x160:r=12:d=0.5','-vf','drawbox=x=30:y=30:w=20:h=10:color=white:t=fill','-c:v','libx264',input]);for(const mode of ['quick','ai']){const spec={input,ffmpeg,output:join(dir,mode+'.mp4'),mode,width:160,height:160,start:0,end:.5,duration:.5,preview:false,regions:[{x:.15,y:.15,width:.25,height:.2}]},file=join(dir,'spec.json');await writeFile(file,JSON.stringify(spec));const events=run(node,[join(runtime,'repair.mjs'),file]).trim().split('\n').map(s=>JSON.parse(s)),timed=events.filter(e=>Number.isFinite(e.time));assert(timed.length>0);assert(timed.every(e=>e.time>=0&&e.time<=.6));if(mode==='ai'){const frames=events.filter(e=>e.frame);assert(frames.length>0);const jpg=join(dir,'frame.jpg');await writeFile(jpg,Buffer.from(frames[0].frame.split(',')[1],'base64'));assert((await readFile(jpg))[0]===255);run(ffmpeg,['-v','error','-i',jpg,'-f','null','-'])}}console.log('LIVE: real encoded time, AI repaired JPEG frame, decodable image PASS')}finally{await rm(dir,{recursive:true,force:true})}

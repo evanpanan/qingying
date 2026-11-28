@@ -24,4 +24,4 @@ test('浏览器仍有实际内存范围提示，AI 画面修复引导桌面版',
  assert.match(cleanupBlocked({size:100},640,100,'ai',false,regions,true,'ai',0,60),/需要桌面版/)
 })
 
-test('原字幕和水印选区分别启用，不会因换字幕而误擦水印',()=>{const original={kind:'subtitle' as const,x:.1,y:.8,width:.8,height:.1},watermark={kind:'watermark' as const,x:.8,y:.1,width:.1,height:.1},regions=[original,watermark];assert.deepEqual(repairSelection(regions,true,true,false),[original]);assert.deepEqual(repairSelection(regions,true,false,true),[watermark]);assert.deepEqual(repairSelection(regions,true,false,false),[]);assert.deepEqual(repairSelection(regions,false,false,false),regions)})
+test('所有已画选区都会处理，不再按字幕水印二次筛选；删除后不处理',()=>{const regions=[{kind:'subtitle' as const,x:.1,y:.8,width:.8,height:.1},{kind:'watermark' as const,x:.8,y:.1,width:.1,height:.1}];assert.deepEqual(repairSelection(regions),regions);assert.deepEqual(repairSelection(regions,true,false,false),regions);assert.deepEqual(repairSelection([]),[])})

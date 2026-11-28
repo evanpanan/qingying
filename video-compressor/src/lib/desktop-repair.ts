@@ -13,7 +13,7 @@ export class DesktopRepair {
     this.dispose();const file:RepairFile={name:result.name,size:result.size,native:true};this.file=file;this.job=result.job
     return {file,url:convertFileSrc(result.preview_path)}
   }
-  async prepare(file:RepairFile,signal:AbortSignal,onProgress:(value:number,text:string)=>void){
+  async prepare(file:RepairFile,signal:AbortSignal,onProgress:(value:number,text:string,meta?:{time?:number;frame?:string})=>void){
     if(this.file===file&&this.job)return this.job
     if(!(file instanceof File))throw new Error('本机视频已失效，请重新拖入')
     this.dispose()
@@ -23,9 +23,9 @@ export class DesktopRepair {
       signal.throwIfAborted();this.file=file;return job
     }catch(error){this.dispose();throw error}
   }
-  async run(file:RepairFile,mode:CleanupMode,regions:RepairRegion[],width:number,height:number,start:number,end:number,time:number,preview:boolean,onProgress:(value:number,text:string)=>void,signal:AbortSignal,translation?:Partial<TranslateOptions>){
+  async run(file:RepairFile,mode:CleanupMode,regions:RepairRegion[],width:number,height:number,start:number,end:number,time:number,preview:boolean,onProgress:(value:number,text:string,meta?:{time?:number;frame?:string})=>void,signal:AbortSignal,translation?:Partial<TranslateOptions>){
     const job=await this.prepare(file,signal,onProgress)
-    const off=await listen<{job:string;progress:number;text:string}>('repair-progress',event=>{if(event.payload.job===job)onProgress(event.payload.progress,event.payload.text)})
+    const off=await listen<{job:string;progress:number;text:string;time?:number;frame?:string}>('repair-progress',event=>{if(event.payload.job===job)onProgress(event.payload.progress,event.payload.text,event.payload)})
     const stop=()=>{void invoke('repair_cancel',{job}).catch(()=>{})}
     signal.addEventListener('abort',stop,{once:true})
     try{

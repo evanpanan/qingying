@@ -2,7 +2,7 @@ import {validRegionTime} from '../../desktop-ai/region-time.mjs'
 import {validRegions,type CleanupMode,type RepairRegion} from './cleanup-geometry'
 export type ProcessingGoal='repair'|'subtitles'|'dub'|'both'|'subtitle-track'|'enhance'
 export function goalOptions(goal:ProcessingGoal){return {subtitles:goal==='subtitles'||goal==='both',dub:goal==='dub'||goal==='both',removeRegions:goal!=='dub'&&goal!=='enhance'}}
-export function repairSelection(regions:RepairRegion[],language:boolean,subtitles:boolean,watermarks:boolean){return language?regions.filter(region=>(region.kind||'watermark')==='subtitle'?subtitles:watermarks):regions}
+export function repairSelection(regions:RepairRegion[],_language?:boolean,_subtitles?:boolean,_watermarks?:boolean){return regions}
 export function cleanupLimit(mode:CleanupMode,native:boolean,_removeRegions:boolean,_method:string){return native||mode!=='translate'?Infinity:60}
 export function fitCleanupRange(start:number,end:number,duration:number,limit:number){const from=Math.max(0,Math.min(Number.isFinite(start)?start:0,Math.max(0,duration-.05)));return {start:from,end:Math.max(from,Math.min(duration,from+limit,Number.isFinite(end)&&end>from?end:duration))}}
 export function cleanupBlocked(file:{size:number}|null,width:number,duration:number,mode:CleanupMode,native:boolean,regions:RepairRegion[],removeRegions:boolean,_method:string,start:number,end:number,subtitles=true,dub=true){

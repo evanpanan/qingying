@@ -10,7 +10,7 @@ import {fileURLToPath} from 'node:url'
 import {dirname, join} from 'node:path'
 import {launch} from './process.mjs'
 export {launch} from './process.mjs'
-function emit(progress,text){process.stdout.write(JSON.stringify({progress,text})+'\n')}
+function emit(progress,text,meta={}){process.stdout.write(JSON.stringify({progress,text,...meta})+'\n')}
 function validate(spec){
   if(spec.duration!==undefined&&(!Number.isFinite(spec.duration)||spec.duration<=0))throw Error('视频时长无效')
   if(!validEnhancement(spec.enhancement,spec.enhancementSize))throw Error('高清增强参数无效')
@@ -60,13 +60,14 @@ export async function runRepair(spec,onProgress=emit){
     if(spec.mode==='quick')args.push('-vf',await repairFilters(spec,spec.width,spec.height,spec.regions,spec.preview?spec.time||0:0))
     if(spec.preview)args.push('-frames:v','1',spec.output)
     else args.push('-map','0:v:0','-map','0:a?','-c:v',spec.mode==='subtitle-track'?'copy':'libx264',...(spec.mode==='quick'?['-crf','22','-preset','fast','-pix_fmt','yuv420p']:[]),'-c:a','aac',...(spec.preserveSubtitles?['-map','0:s?','-c:s','mov_text']:['-sn']),'-movflags','+faststart',spec.output)
-    onProgress(10,'正在处理视频…');const task=launch(spec.ffmpeg,args);task.child.stdin.end();await task.done;onProgress(100,'处理完成');return
+    onProgress(1,'正在处理视频…');if(!spec.preview)args.unshift('-progress','pipe:1','-nostats');const task=launch(spec.ffmpeg,args);let pending='';task.child.stdout.on('data',chunk=>{pending+=chunk.toString();const lines=pending.split('\n');pending=lines.pop();for(const line of lines)if(line.startsWith('out_time_us=')){const time=Number(line.slice(12))/1e6;if(Number.isFinite(time))onProgress(Math.min(99,Math.round(time/(spec.duration||spec.end||1)*99)),'正在修补视频…',{time})}});task.child.stdin.end();await task.done;onProgress(100,'处理完成');return
   }
   const root=dirname(fileURLToPath(import.meta.url)),model=await readFile(spec.model||join(root,'models/lama_fp32.onnx'))
   if(createHash('sha256').update(model).digest('hex')!=='1faef5301d78db7dda502fe59966957ec4b79dd64e16f03ed96913c7a4eb68d6')throw new Error('内置模型校验失败，请重新安装客户端')
   onProgress(2,'正在加载内置 AI 引擎…')
   const ort=await import('onnxruntime-node'),session=await ort.InferenceSession.create(model,{executionProviders:['cpu'],intraOpNumThreads:4,graphOptimizationLevel:'all'})
   const {width,height}=dimensions(spec.width,spec.height),fps=12,length=spec.end-spec.start,total=spec.preview?1:Math.ceil(length*fps),start=spec.preview?(spec.time||0):spec.start
+  let lastFrameAt=0;const sharp=(await import('sharp')).default
   const decode=launch(spec.ffmpeg,['-ss',String(start),'-i',spec.input,...(spec.preview?['-frames:v','1']:['-t',String(length)]),'-vf',`scale=${width}:${height},setsar=1,fps=${fps}`,'-an','-sn','-f','rawvideo','-pix_fmt','rgb24','pipe:1'])
   const args=['-f','rawvideo','-pix_fmt','rgb24','-s',`${width}x${height}`,'-r',String(fps),'-i','pipe:0']
   if(spec.preview)args.push('-frames:v','1',spec.output)
@@ -75,11 +76,11 @@ export async function runRepair(spec,onProgress=emit){
   const frameBytes=width*height*3;let buffer=Buffer.alloc(0),frames=0,previousInput=null,previousOutput=null,previousKey=null
   const stats={inferences:0}
   try{
-    for await(const chunk of decode.child.stdout){buffer=buffer.length?Buffer.concat([buffer,chunk]):chunk;while(buffer.length>=frameBytes){const sourceFrame=buffer.subarray(0,frameBytes),active=spec.regions.filter(r=>regionActive(r,start+frames/fps)),key=JSON.stringify(active);let frame;if(!active.length){frame=sourceFrame;previousInput=null;previousKey=null;}else if(previousInput&&key===previousKey&&sourceFrame.equals(previousInput))frame=previousOutput;else{frame=await inpaintRGB(sourceFrame,width,height,active,session,ort,stats);previousKey=key;previousInput=Buffer.from(sourceFrame);previousOutput=frame;}buffer=buffer.subarray(frameBytes);if(!encode.child.stdin.write(frame))await once(encode.child.stdin,'drain');frames++;onProgress(Math.min(96,Math.round(frames/total*95)),`处理 ${frames} / ${total} 帧 · ${active.length?`${active.length} 个生效选区`:'当前帧不修补'}`)}}
+    for await(const chunk of decode.child.stdout){buffer=buffer.length?Buffer.concat([buffer,chunk]):chunk;while(buffer.length>=frameBytes){const sourceFrame=buffer.subarray(0,frameBytes),active=spec.regions.filter(r=>regionActive(r,start+frames/fps)),key=JSON.stringify(active);let frame;if(!active.length){frame=sourceFrame;previousInput=null;previousKey=null;}else if(previousInput&&key===previousKey&&sourceFrame.equals(previousInput))frame=previousOutput;else{frame=await inpaintRGB(sourceFrame,width,height,active,session,ort,stats);previousKey=key;previousInput=Buffer.from(sourceFrame);previousOutput=frame;}buffer=buffer.subarray(frameBytes);if(!encode.child.stdin.write(frame))await once(encode.child.stdin,'drain');frames++;let meta={time:start+(frames-1)/fps};if(!spec.preview&&Date.now()-lastFrameAt>=750){lastFrameAt=Date.now();const jpeg=await sharp(Buffer.from(frame),{raw:{width,height,channels:3}}).resize({width:360,withoutEnlargement:true}).jpeg({quality:65}).toBuffer();meta.frame='data:image/jpeg;base64,'+jpeg.toString('base64')}onProgress(Math.min(96,Math.round(frames/total*95)),`处理 ${frames} / ${total} 帧 · ${active.length?`${active.length} 个生效选区`:'当前帧不修补'}`,meta)}}
     if(buffer.length||!frames)throw new Error('未能读取完整视频帧')
     encode.child.stdin.end();await Promise.all([decode.done,encode.done]);onProgress(100,`AI 修复完成 · 实际推理 ${stats.inferences} 次`)
   }finally{decode.child.kill();encode.child.kill();await session.release()}
 }
 if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1]){
-  try{const spec=JSON.parse(await readFile(process.argv[2],'utf8'));const hd=spec.enhancement&&spec.enhancement!=='off',split=hd&&spec.mode!=='enhance';await runRepair(spec,(p,t)=>emit(split?Math.round(p*.7):p,t));const post=(p,t)=>emit(split?70+Math.round(p*.3):p,t);if(spec.preview)await enhancePreview(spec,post);else await enhanceOutput(spec,post)}catch(error){process.stderr.write((error?.message||'处理失败')+'\n');process.exitCode=1}
+  try{const spec=JSON.parse(await readFile(process.argv[2],'utf8'));const hd=spec.enhancement&&spec.enhancement!=='off',split=hd&&spec.mode!=='enhance';await runRepair(spec,(p,t,meta)=>emit(split?Math.round(p*.7):p,t,meta));const post=(p,t,meta)=>emit(split?70+Math.round(p*.3):p,t,meta);if(spec.preview)await enhancePreview(spec,post);else await enhanceOutput(spec,post)}catch(error){process.stderr.write((error?.message||'处理失败')+'\n');process.exitCode=1}
 }

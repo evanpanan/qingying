@@ -6,7 +6,7 @@ import {enhancementFilter} from './enhancement.mjs'
 const root=dirname(fileURLToPath(import.meta.url))
 async function run(ffmpeg,args){const p=launch(ffmpeg,args);p.child.stdin.end();p.child.stdout.resume();await p.done}
 
-async function runProgress(spec,args,progress){const p=launch(spec.ffmpeg,['-progress','pipe:1',...args]);p.child.stdin.end();let pending='';const duration=spec.mode==='translate'?spec.end-spec.start:spec.duration??spec.end;for await(const chunk of p.child.stdout){pending+=chunk.toString();let i;while((i=pending.indexOf('\n'))>=0){const line=pending.slice(0,i);pending=pending.slice(i+1);if(line.startsWith('out_time_us=')&&duration>0){const seconds=Number(line.slice(12))/1e6;if(Number.isFinite(seconds))progress(Math.max(2,Math.min(98,Math.floor(seconds/duration*98))),'正在降噪并增强细节…')}}}await p.done}
+async function runProgress(spec,args,progress){const p=launch(spec.ffmpeg,['-progress','pipe:1',...args]);p.child.stdin.end();let pending='';const duration=spec.mode==='translate'?spec.end-spec.start:spec.duration??spec.end;for await(const chunk of p.child.stdout){pending+=chunk.toString();let i;while((i=pending.indexOf('\n'))>=0){const line=pending.slice(0,i);pending=pending.slice(i+1);if(line.startsWith('out_time_us=')&&duration>0){const seconds=Number(line.slice(12))/1e6;if(Number.isFinite(seconds))progress(Math.max(2,Math.min(98,Math.floor(seconds/duration*98))),'正在降噪并增强细节…',{time:seconds+(spec.mode==='translate'?spec.start:0),frame:''})}}}await p.done}
 async function compatibleAudio(spec,args,progress){
  const execute=progress?()=>runProgress(spec,args,progress):()=>run(spec.ffmpeg,args)
  try{await execute()}catch(error){if(!/not currently supported|could not find tag|codec.*not supported/i.test(error.message))throw error;const retry=[...args];const at=retry.indexOf('-c:a');if(at>=0)retry[at+1]='aac';else retry.splice(retry.length-1,0,'-c:a','aac');retry.splice(retry.length-1,0,'-c:s','mov_text');if(progress)progress(2,'正在转换不兼容音轨并增强画面…');if(progress)await runProgress(spec,retry,progress);else await run(spec.ffmpeg,retry)}
@@ -17,7 +17,7 @@ export async function enhanceOutput(spec,progress){
  try{
   if(spec.enhancement==='ai2x'){
    if(process.platform!=='darwin')throw Error('Apple AI 2×增强仅支持 macOS 26 及支持的设备')
-   const p=launch(join(root,'native/lightvid-enhance'),[source,video],false);p.child.stdin.end();let pending='';for await(const chunk of p.child.stdout){pending+=chunk.toString();let i;while((i=pending.indexOf('\n'))>=0){const line=pending.slice(0,i);pending=pending.slice(i+1);try{const v=JSON.parse(line);progress(Math.min(98,v.progress),v.text)}catch{}}}await p.done
+   const p=launch(join(root,'native/lightvid-enhance'),[source,video],false);p.child.stdin.end();let pending='';for await(const chunk of p.child.stdout){pending+=chunk.toString();let i;while((i=pending.indexOf('\n'))>=0){const line=pending.slice(0,i);pending=pending.slice(i+1);try{const v=JSON.parse(line);progress(Math.min(98,v.progress),v.text,{time:(spec.mode==='translate'?spec.start:0)+(spec.mode==='translate'?spec.end-spec.start:spec.duration??spec.end)*v.progress/98,frame:''})}catch{}}}await p.done
    const duration=spec.mode==='translate'?spec.end-spec.start:spec.duration??spec.end;progress(99,'正在封装增强画面与原音轨…');
    await compatibleAudio(spec,['-i',video,'-i',source,...(Number.isFinite(duration)&&duration>0?['-t',String(duration)]:[]),'-map','0:v:0','-map','1:a?','-map','1:s?','-c','copy','-movflags','+faststart',result])
   }else{
