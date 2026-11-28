@@ -37,7 +37,7 @@ export async function translateNative(input){
   if(spec.removeRegions&&spec.repairMethod==='ai'){videoSource=join(work,'cleaned.mp4');videoBase=0;await runRepair({...spec,mode:'ai',preview:false,preserveSubtitles:!spec.subtitles,output:videoSource},(p,text,meta)=>emit(Math.round(p*.35),text,meta))}
   let allRows=[],videoEntries='',audioEntries=''
   for(let index=0;index<parts.length;index++){
-   const part=parts[index],folder=join(work,`part-${String(index).padStart(6,'0')}`);await mkdir(folder,{recursive:true});const progress=text=>emit(35+Math.round(index/parts.length*55),`第 ${index+1}/${parts.length} 段 · ${text}`,{time:part.start})
+   const part=parts[index],folder=join(work,`part-${String(index).padStart(6,'0')}`);await mkdir(folder,{recursive:true});const progress=text=>emit(35+Math.round(index/parts.length*55),`第 ${index+1}/${parts.length} 段 · ${text}`,{time:part.start,frame:''})
    progress('正在识别和翻译语音…');const rows=await speechSegment({...spec,start:part.start,end:part.end},folder,progress);allRows.push(...rows.map(row=>({...row,start:row.start+part.offset,end:row.end+part.offset})))
    if(spec.subtitles){progress('正在合成英文字幕…');await renderSegment({...spec,start:part.start,end:part.end},folder,rows,videoSource,videoBase+part.offset);videoEntries+=listEntry(join(folder,'segment.mp4'),part.end-part.start);for(const name of ['speech.raw','voice.raw','voice.wav',...rows.map((_,i)=>`caption-${i}.png`)])await rm(join(folder,name),{force:true})}
    else{for(const name of ['speech.raw','voice.raw','voice.wav'])await rm(join(folder,name),{force:true})}
