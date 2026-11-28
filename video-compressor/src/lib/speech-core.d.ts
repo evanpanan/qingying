@@ -11,6 +11,12 @@ declare module '*translation-core.mjs' {
 }
 declare module '*translation-render.mjs' {
  export function tempoFilter(ratio:number):string
- export function compositeFilter(width:number,height:number,regions:import('./cleanup-geometry').RepairRegion[],cues:import('*translation-core.mjs').SpeechRow[]):{filter:string;label:string}
+ export function compositeFilter(width:number,height:number,regions:import('./cleanup-geometry').RepairRegion[],cues:import('*translation-core.mjs').SpeechRow[],offset?:number):{filter:string;label:string}
  export function captionLayout(text:string,width:number):{font:number;lines:string[];height:number}
+}
+
+declare module '*region-time.mjs' {
+ export function validRegionTime(r:{start?:number;end?:number}):boolean
+ export function regionActive(r:{start?:number;end?:number},time:number):boolean
+ export function regionEnable(r:{start?:number;end?:number},offset?:number):string
 }

@@ -22,5 +22,8 @@ try{
  assert((await readFile(output)).length>1000)
  run(ffmpeg,['-hide_banner','-loglevel','error','-i',output,'-map','0:a:0','-t','0.05','-f','null','-'])
  for(const mode of ['quick','subtitle-track']){await writeFile(spec,JSON.stringify({...common,mode,preview:false,output:join(dir,mode+'.mp4')}));run(node,[join(runtime,'repair.mjs'),spec]);assert((await readFile(join(dir,mode+'.mp4'))).length>1000)}
+ const timed=join(dir,'timed.mp4');await writeFile(spec,JSON.stringify({...common,end:1,regions:[{...common.regions[0],start:0,end:.25},{...common.regions[1],start:.5,end:.75}],preview:false,output:timed}));run(node,[join(runtime,'repair.mjs'),spec]);
+ for(const [time,first,second] of [[.125,true,false],[.375,false,false],[.625,false,true],[.875,false,false]]){const frame=spawnSync(ffmpeg,['-hide_banner','-loglevel','error','-ss',String(time),'-i',timed,'-frames:v','1','-f','rawvideo','-pix_fmt','rgb24','pipe:1'],{maxBuffer:4*1024*1024});assert.equal(frame.status,0);for(const [x,y,active] of [[250,22,first],[150,150,second]]){const green=frame.stdout[(y*320+x)*3+1];assert(active?green>50:green<40,`time ${time}, region ${x}, green ${green}`)}}
+ console.log('TIMED AI REGIONS: independent intervals and untouched inactive regions PASS')
  console.log('OFFLINE REAL AI: two-region preview + video + audio + quick repair + subtitle-track PASS')
 }finally{await rm(dir,{recursive:true,force:true})}

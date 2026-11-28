@@ -1,3 +1,4 @@
+import {regionEnable} from './region-time.mjs'
 import {readFile,writeFile,mkdir,rm} from 'node:fs/promises'
 import {dirname,join} from 'node:path'
 import {fileURLToPath} from 'node:url'
@@ -21,7 +22,7 @@ async function renderSegment(spec,dir,rows,videoSource,videoStart){
  if(spec.dub)args.push('-i',join(dir,'english.wav'));else args.push('-ss',String(videoStart),'-i',videoSource)
  const sharp=(await import('sharp')).default,escape=text=>text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
  for(let i=0;i<rows.length;i++){const {font,lines,height:ch}=captionLayout(rows[i].text,width),svg=`<svg width="${width}" height="${ch}" xmlns="http://www.w3.org/2000/svg"><text x="50%" font-family="sans-serif" font-weight="600" font-size="${font}" text-anchor="middle" fill="white" stroke="#101710" stroke-width="${Math.max(3,font*.14)}" stroke-linejoin="round" paint-order="stroke fill">${lines.map((line,n)=>`<tspan x="50%" y="${8+font+n*font*1.4}">${escape(line)}</tspan>`).join('')}</text></svg>`;const name=join(dir,`caption-${i}.png`);await sharp(Buffer.from(svg)).png().toFile(name);args.push('-threads','1','-i',name)}
- const graph=compositeFilter(width,height,spec.removeRegions&&spec.repairMethod!=='ai'?spec.regions:[],rows)
+ const graph=compositeFilter(width,height,spec.removeRegions&&spec.repairMethod!=='ai'?spec.regions:[],rows,spec.start)
  await run(spec.ffmpeg,[...args,'-filter_complex_threads','1','-filter_complex',graph.filter,'-map',graph.label,'-an','-t',String(spec.end-spec.start),'-r','24','-c:v','libx264','-threads','4','-crf','22','-preset','fast','-pix_fmt','yuv420p','-sn','-movflags','+faststart',join(dir,'segment.mp4')])
 }
 export async function translateNative(input){
@@ -51,7 +52,7 @@ export async function translateNative(input){
    await writeFile(spec.output.replace(/\.mp4$/,'.srt'),subtitles(allRows))
   }else{
    const args=['-ss',String(videoBase),'-i',videoSource,'-i',audio,'-map','0:v:0','-map','1:a:0','-map','0:s?','-c:s','mov_text','-t',String(duration)]
-   if(spec.removeRegions&&spec.repairMethod!=='ai'){args.push('-vf',spec.regions.map(r=>{const x=Math.max(1,Math.round(r.x*spec.width)),y=Math.max(1,Math.round(r.y*spec.height)),w=Math.max(1,Math.min(spec.width-x-1,Math.round(r.width*spec.width))),h=Math.max(1,Math.min(spec.height-y-1,Math.round(r.height*spec.height)));return `delogo=x=${x}:y=${y}:w=${w}:h=${h}:show=0`}).join(','),'-c:v','libx264','-threads','4','-crf','22','-preset','fast','-pix_fmt','yuv420p')}else args.push('-c:v','copy')
+   if(spec.removeRegions&&spec.repairMethod!=='ai'){args.push('-vf',spec.regions.map(r=>{const x=Math.max(1,Math.round(r.x*spec.width)),y=Math.max(1,Math.round(r.y*spec.height)),w=Math.max(1,Math.min(spec.width-x-1,Math.round(r.width*spec.width))),h=Math.max(1,Math.min(spec.height-y-1,Math.round(r.height*spec.height)));return `delogo=x=${x}:y=${y}:w=${w}:h=${h}:show=0${regionEnable(r,spec.start)}`}).join(','),'-c:v','libx264','-threads','4','-crf','22','-preset','fast','-pix_fmt','yuv420p')}else args.push('-c:v','copy')
    await run(spec.ffmpeg,[...args,'-c:a','copy','-movflags','+faststart',spec.output]);await rm(spec.output.replace(/\.mp4$/,'.srt'),{force:true})
   }
   emit(100,spec.subtitles?(spec.dub?'英文字幕与配音已完成':'英文字幕已完成，原音轨已保留'):(spec.removeRegions?'英文配音与选区修补已完成':'英文配音已完成，原画面与字幕已保留'))

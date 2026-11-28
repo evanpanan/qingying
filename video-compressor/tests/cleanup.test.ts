@@ -38,3 +38,15 @@ test('八个方向缩放固定对边，保持有效尺寸并限制在视频内',
  assert.deepEqual(original,{x:.2,y:.3,width:.4,height:.3})
  assert.throws(()=>resizeRegion(original,'se',NaN,0))
 })
+
+test('选区生效时间采用原视频半开区间，缩放保留类别和时间',async()=>{
+ const {regionActive,regionEnable,validRegionTime}=await import('../desktop-ai/region-time.mjs')
+ const r={kind:'watermark' as const,x:.1,y:.1,width:.2,height:.2,start:60,end:65}
+ assert.equal(regionActive(r,59.99),false);assert.equal(regionActive(r,60),true);assert.equal(regionActive(r,64.99),true);assert.equal(regionActive(r,65),false)
+ assert.equal(regionActive({...r,start:undefined,end:undefined},1000),true)
+ for(const v of [{start:5,end:5},{start:-1,end:5},{start:0},{start:0,end:Infinity}])assert.equal(validRegionTime(v),false)
+ assert.match(regionEnable(r,60),/gte\(t,0.000000\).*lt\(t,5.000000\)/)
+ assert.match(repairFilter(r,640,360,62),/gte\(t,-2.000000\).*lt\(t,3.000000\)/)
+ const resized=resizeRegion(r,'se',.1,.1);assert.equal(resized.start,60);assert.equal(resized.end,65);assert.equal(resized.kind,'watermark')
+ const {compositeFilter}=await import('../desktop-ai/translation-render.mjs');assert.match(compositeFilter(640,360,[r],[],60).filter,/gte\(t,0.000000\).*lt\(t,5.000000\)/)
+})

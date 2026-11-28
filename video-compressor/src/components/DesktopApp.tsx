@@ -54,7 +54,7 @@ export default function DesktopApp() {
       <div className="desktop-brand"><span className="brand-symbol"><svg viewBox="0 0 48 48" width="35" height="35" aria-hidden="true"><use href="/lightvid.svg?v=2#brand-mark" /></svg></span><strong>轻影<span>LIGHTVID</span></strong></div>
       <div className="desktop-sidebar-label">工具</div>
       <nav aria-label="媒体工具">{tools.map((tool, index) => <button key={tool.id} data-tool={tool.id} aria-current={page === tool.id ? 'page' : undefined} onClick={() => navigate(tool.id)}><tool.icon size={18} /><span>{tool.name}</span><kbd>⌘{index + 1}</kbd></button>)}</nav>
-      <div className="desktop-sidebar-bottom"><span className="status-dot" /> 本机处理<p>转换、压缩与 AI 修复在本机完成<br />原文件保持不变</p><div className="desktop-about"><strong>轻影 <span>v1.8.0</span></strong><small>更新于 2026-11-28</small><a href="https://x.com/Yep_Cooper" target="_blank" rel="noopener noreferrer" aria-label="意见与交流：访问创作者 Cooper 的推特主页"><span>意见与交流 · 𝕏 @Yep_Cooper</span><ArrowUpRight size={13}/></a></div><DesktopUpdater /></div>
+      <div className="desktop-sidebar-bottom"><span className="status-dot" /> 本机处理<p>转换、压缩与 AI 修复在本机完成<br />原文件保持不变</p><div className="desktop-about"><strong>轻影 <span>v1.8.1</span></strong><small>更新于 2026-11-28</small><a href="https://x.com/Yep_Cooper" target="_blank" rel="noopener noreferrer" aria-label="意见与交流：访问创作者 Cooper 的推特主页"><span>意见与交流 · 𝕏 @Yep_Cooper</span><ArrowUpRight size={13}/></a></div><DesktopUpdater /></div>
     </aside>
     <section className="desktop-main">
       <header className="desktop-toolbar"><button className="icon-button" aria-label={sidebar ? '隐藏侧边栏' : '显示侧边栏'} aria-expanded={sidebar} onClick={() => setSidebar(value => !value)}><PanelLeft size={19} /></button><div><h1>{current.name}</h1><span>{current.detail}</span></div><span className="desktop-toolbar-hint"><Keyboard size={15} /> ⌘1 / ⌘2 / ⌘3 / ⌘4</span></header>
@@ -66,7 +66,7 @@ export default function DesktopApp() {
           {visited.has('compress') && <section hidden={page !== 'compress'} aria-label="视频压缩工作区"><div className="desktop-compressor legacy-tool"><Compress active={page === 'compress'} /></div></section>}
         </Suspense>
       </div>
-      <footer className="desktop-statusbar"><span>轻影 1.8.0 · 更新于 2026-11-28</span><span>切换工具可继续处理任务</span></footer>
+      <footer className="desktop-statusbar"><span>轻影 1.8.1 · 更新于 2026-11-28</span><span>切换工具可继续处理任务</span></footer>
     </section>
   </div>
 }

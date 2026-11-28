@@ -17,7 +17,7 @@ export async function translateVideo(file:File,regions:RepairRegion[],width:numb
    if(dub)await put('english.wav',wav(mixed));const dims=outputDimensions(width,height),args=['-ss',String(options.start),'-i','translate-source'];if(dub)args.push('-i','english.wav');else args.push('-ss',String(options.start),'-i','translate-source')
    const cues=addSubtitles?result.rows:[]
    for(let i=0;i<cues.length;i++){const name=`caption-${i}.png`;await put(name,new Uint8Array(await(await caption(result.rows[i].text,dims.width)).arrayBuffer()));args.push('-i',name)}
-   const graph=compositeFilter(dims.width,dims.height,options.removeRegions?regions:[],cues);files.add('translated.mp4');progress(85,'正在合成英文配音、英文字幕和修补画面…');const copyPicture=!addSubtitles&&!options.removeRegions
+   const graph=compositeFilter(dims.width,dims.height,options.removeRegions?regions:[],cues,options.start);files.add('translated.mp4');progress(85,'正在合成英文配音、英文字幕和修补画面…');const copyPicture=!addSubtitles&&!options.removeRegions
    await exec([...args,...(copyPicture?['-map','0:v:0']:['-filter_complex',graph.filter,'-map',graph.label]),'-map',dub?'1:a:0':'1:a?','-t',String(duration),...(copyPicture?['-c:v','copy']:['-r','24','-c:v','libx264','-preset','fast','-crf','22','-pix_fmt','yuv420p']),'-c:a','aac',...(addSubtitles?['-sn']:['-map','0:s?','-c:s','mov_text']),'-movflags','+faststart','translated.mp4']);progress(100,'英文视频已完成');return {blob:new Blob([(await read('translated.mp4')).slice().buffer as ArrayBuffer],{type:'video/mp4'}),srt:addSubtitles?subtitles(result.rows):''}
   }finally{await Promise.all([...files].map(name=>ff.deleteFile(name).catch(()=>{})))}
  })

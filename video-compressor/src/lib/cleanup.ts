@@ -9,7 +9,7 @@ export async function previewQuick(file:File,regions:RepairRegion[],width:number
     const input='repair-preview-input.'+(file.name.split('.').pop()?.replace(/[^a-z0-9]/gi,'')||'mp4'),output='repair-preview.png'
     try{
       await ff.writeFile(input,new Uint8Array(await file.arrayBuffer()))
-      const code=await ff.exec(['-ss',String(time),'-i',input,'-vf',repairFilter(regions,width,height),'-frames:v','1',output])
+      const code=await ff.exec(['-ss',String(time),'-i',input,'-vf',repairFilter(regions,width,height,time),'-frames:v','1',output])
       if(code!==0)throw new Error('区域修补预览失败，请缩小选区或更换视频')
       const bytes=await ff.readFile(output);if(!(bytes instanceof Uint8Array))throw new Error('未生成预览')
       return new Blob([bytes.slice().buffer as ArrayBuffer],{type:'image/png'})

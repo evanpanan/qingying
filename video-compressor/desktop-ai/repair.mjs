@@ -1,3 +1,4 @@
+import {validRegionTime,regionActive,regionEnable} from './region-time.mjs'
 import {readFile} from 'node:fs/promises'
 import {spawn} from 'node:child_process'
 import {once} from 'node:events'
@@ -17,7 +18,7 @@ function validate(spec){
   if(!['ai','quick','subtitle-track'].includes(spec.mode))throw new Error('处理模式无效')
   if(!spec.input||!spec.output||!spec.ffmpeg)throw new Error('缺少输入或输出')
   if(!Number.isFinite(spec.width)||!Number.isFinite(spec.height)||spec.width<8||spec.height<8)throw new Error('视频尺寸无效')
-  if(spec.mode!=='subtitle-track'&&(!Array.isArray(spec.regions)||spec.regions.length<1||spec.regions.length>8||spec.regions.some(r=>![r.x,r.y,r.width,r.height].every(Number.isFinite)||r.x<0||r.y<0||r.width<=0||r.height<=0||r.x+r.width>1.000001||r.y+r.height>1.000001)))throw new Error('修补区域无效')
+  if(spec.mode!=='subtitle-track'&&(!Array.isArray(spec.regions)||spec.regions.length<1||spec.regions.length>8||spec.regions.some(r=>!validRegionTime(r)||![r.x,r.y,r.width,r.height].every(Number.isFinite)||r.x<0||r.y<0||r.width<=0||r.height<=0||r.x+r.width>1.000001||r.y+r.height>1.000001)))throw new Error('修补区域无效')
   if(spec.mode==='ai'&&(!Number.isFinite(spec.start)||!Number.isFinite(spec.end)||spec.start<0||spec.end<=spec.start))throw new Error('请设置有效的处理起止时间')
 }
 function pixelRegion(r,width,height){const x=Math.max(1,Math.min(width-3,Math.round(r.x*width))),y=Math.max(1,Math.min(height-3,Math.round(r.y*height)));return {x,y,width:Math.max(1,Math.min(width-x-1,Math.round(r.width*width))),height:Math.max(1,Math.min(height-y-1,Math.round(r.height*height)))}}
@@ -54,7 +55,7 @@ export async function runRepair(spec,onProgress=emit){
   validate(spec)
   if(spec.mode!=='ai'){
     const args=spec.preview?['-ss',String(spec.time||0),'-i',spec.input]:['-i',spec.input]
-    if(spec.mode==='quick')args.push('-vf',spec.regions.map(r=>{const p=pixelRegion(r,spec.width,spec.height);return `delogo=x=${p.x}:y=${p.y}:w=${p.width}:h=${p.height}:show=0`}).join(','))
+    if(spec.mode==='quick')args.push('-vf',spec.regions.map(r=>{const p=pixelRegion(r,spec.width,spec.height);return `delogo=x=${p.x}:y=${p.y}:w=${p.width}:h=${p.height}:show=0${regionEnable(r,spec.preview?spec.time||0:0)}`}).join(','))
     if(spec.preview)args.push('-frames:v','1',spec.output)
     else args.push('-map','0:v:0','-map','0:a?','-c:v',spec.mode==='subtitle-track'?'copy':'libx264',...(spec.mode==='quick'?['-crf','22','-preset','fast','-pix_fmt','yuv420p']:[]),'-c:a','aac',...(spec.preserveSubtitles?['-map','0:s?','-c:s','mov_text']:['-sn']),'-movflags','+faststart',spec.output)
     onProgress(10,'正在处理视频…');const task=launch(spec.ffmpeg,args);task.child.stdin.end();await task.done;onProgress(100,'处理完成');return
@@ -69,11 +70,11 @@ export async function runRepair(spec,onProgress=emit){
   if(spec.preview)args.push('-frames:v','1',spec.output)
   else args.push('-ss',String(spec.start),'-i',spec.input,'-map','0:v:0','-map','1:a?','-t',String(length),'-c:v','libx264','-crf','22','-preset','fast','-pix_fmt','yuv420p','-c:a','aac',...(spec.preserveSubtitles?['-map','1:s?','-c:s','mov_text']:['-sn']),'-movflags','+faststart',spec.output)
   const encode=launch(spec.ffmpeg,args);decode.child.stdin.end();encode.child.stdout.resume()
-  const frameBytes=width*height*3;let buffer=Buffer.alloc(0),frames=0,previousInput=null,previousOutput=null
+  const frameBytes=width*height*3;let buffer=Buffer.alloc(0),frames=0,inferences=0,previousInput=null,previousOutput=null,previousKey=null
   try{
-    for await(const chunk of decode.child.stdout){buffer=buffer.length?Buffer.concat([buffer,chunk]):chunk;while(buffer.length>=frameBytes){const sourceFrame=buffer.subarray(0,frameBytes);let frame;if(previousInput&&sourceFrame.equals(previousInput))frame=previousOutput;else{frame=await inpaintRGB(sourceFrame,width,height,spec.regions,session,ort);previousInput=Buffer.from(sourceFrame);previousOutput=frame;}buffer=buffer.subarray(frameBytes);if(!encode.child.stdin.write(frame))await once(encode.child.stdin,'drain');frames++;onProgress(Math.min(96,Math.round(frames/total*95)),`AI 修复 ${frames} / ${total} 帧 · ${spec.regions.length} 个选区`)}}
+    for await(const chunk of decode.child.stdout){buffer=buffer.length?Buffer.concat([buffer,chunk]):chunk;while(buffer.length>=frameBytes){const sourceFrame=buffer.subarray(0,frameBytes),active=spec.regions.filter(r=>regionActive(r,start+frames/fps)),key=JSON.stringify(active);let frame;if(!active.length){frame=sourceFrame;previousInput=null;previousKey=null;}else if(previousInput&&key===previousKey&&sourceFrame.equals(previousInput))frame=previousOutput;else{inferences+=active.length;frame=await inpaintRGB(sourceFrame,width,height,active,session,ort);previousKey=key;previousInput=Buffer.from(sourceFrame);previousOutput=frame;}buffer=buffer.subarray(frameBytes);if(!encode.child.stdin.write(frame))await once(encode.child.stdin,'drain');frames++;onProgress(Math.min(96,Math.round(frames/total*95)),`处理 ${frames} / ${total} 帧 · ${active.length?`${active.length} 个生效选区`:'当前帧不修补'}`)}}
     if(buffer.length||!frames)throw new Error('未能读取完整视频帧')
-    encode.child.stdin.end();await Promise.all([decode.done,encode.done]);onProgress(100,'AI 修复完成')
+    encode.child.stdin.end();await Promise.all([decode.done,encode.done]);onProgress(100,`AI 修复完成 · 实际推理 ${inferences} 次`)
   }finally{decode.child.kill();encode.child.kill();await session.release()}
 }
 if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1]){

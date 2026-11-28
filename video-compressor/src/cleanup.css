@@ -68,3 +68,5 @@
 .cleanup-page .language-summary {margin:10px 0;color:#667c53;font-size:11px;}
 .cleanup-page .model-first-use {margin-bottom:0;}
 .cleanup-capacity-note {font-size:11px;line-height:1.8;color:var(--muted);margin:14px 0;}
+
+.region-timing{display:grid;gap:8px;padding:12px 0;border-top:1px solid var(--line,#dde1d3);border-bottom:1px solid var(--line,#dde1d3)}.region-timing label{display:grid;gap:5px;font-size:12px}.region-timing input,.region-timing select{width:100%;min-width:0;padding:7px;border:1px solid #d8ddcf;border-radius:8px;background:#fff;color:#30382b}.region-timing small{font-size:11px;line-height:1.6;color:#78836e}.region-timing .quiet-button{white-space:normal}
