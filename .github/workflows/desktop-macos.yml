@@ -75,7 +75,7 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: npm run release:macos
-      - name: Verify bundled engines, launch and media processing
+      - name: Verify bundled engines, orientation, launch and media processing
         run: |
           app="$PWD/src-tauri/target/release/bundle/macos/轻影.app"
           codesign --verify --deep --strict --verbose=2 "$app"
