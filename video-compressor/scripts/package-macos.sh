@@ -15,6 +15,7 @@ for binary in "$app"/Contents/MacOS/*; do
   codesign --force --sign - "$binary"
 done
 find "$app/Contents/Resources/desktop-ai" -type f \( -name '*.node' -o -name '*.dylib' \) -exec codesign --force --sign - {} \;
+codesign --force --sign - "$app/Contents/Resources/desktop-ai/native/lightvid-enhance"
 codesign --force --sign - "$app"
 codesign --verify --deep --strict --verbose=2 "$app"
 ditto "$app" "$staging/轻影.app"

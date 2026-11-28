@@ -11,7 +11,7 @@ declare module '*translation-core.mjs' {
 }
 declare module '*translation-render.mjs' {
  export function tempoFilter(ratio:number):string
- export function compositeFilter(width:number,height:number,regions:import('./cleanup-geometry').RepairRegion[],cues:import('*translation-core.mjs').SpeechRow[],offset?:number):{filter:string;label:string}
+ export function compositeFilter(width:number,height:number,regions:import('./cleanup-geometry').RepairRegion[],cues:import('*translation-core.mjs').SpeechRow[],offset?:number,repairGraph?:string):{filter:string;label:string}
  export function captionLayout(text:string,width:number):{font:number;lines:string[];height:number}
 }
 
@@ -19,4 +19,15 @@ declare module '*region-time.mjs' {
  export function validRegionTime(r:{start?:number;end?:number}):boolean
  export function regionActive(r:{start?:number;end?:number},time:number):boolean
  export function regionEnable(r:{start?:number;end?:number},offset?:number):string
+}
+
+declare module '*text-mask.mjs' {
+ export function textMask(rgb:Uint8Array,width:number,height:number,region:import('./cleanup-geometry').RepairRegion):{mask:Uint8Array;pixels:number;coverage:number}
+ export function hasTextMask(region:import('./cleanup-geometry').RepairRegion):boolean
+ export function maskReferenceTime(region:import('./cleanup-geometry').RepairRegion):number
+}
+declare module '*enhancement.mjs' {
+ export function validEnhancement(mode?:string,size?:string):boolean
+ export function enhancementDimensions(width:number,height:number,mode?:string,size?:string):{width:number;height:number}
+ export function enhancementFilter(width:number,height:number,mode?:string,size?:string):string
 }

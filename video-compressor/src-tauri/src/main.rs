@@ -648,7 +648,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             update_location::update_location, update_location::update_open_applications,
             library::library_list, library::library_action, library::library_save,
-            repair::repair_import, repair::repair_begin, repair::repair_upload, repair::repair_run, repair::repair_cancel, repair::repair_preview, repair::repair_save, repair::repair_discard,
+            repair::repair_import, repair::repair_begin, repair::repair_upload, repair::enhancement_support,repair::repair_run, repair::repair_cancel, repair::repair_preview, repair::repair_save, repair::repair_discard,
             compress_video,
             convert_video,
             native_extract,

@@ -5,7 +5,7 @@ import {resolve,join} from 'node:path'
 export function manifest(version,signature,date=new Date().toISOString()){
  if(!/^\d+\.\d+\.\d+$/.test(version))throw Error('发布版本无效')
  if(!signature.trim()||!/^[A-Za-z0-9+/=\s]+$/.test(signature))throw Error('缺少有效更新签名')
- return {version,notes:'每个选区可独立设置生效时间；时间段外不修补并跳过对应 AI 推理。支持快速修补、AI 和字幕配音叠加。预览提示选区是否生效，调整大小保留用途和时间。',pub_date:date,platforms:{'darwin-aarch64':{signature:signature.trim(),url:`https://github.com/evanpanan/qingying/releases/download/v${version}/LightVid_${version}_aarch64.app.tar.gz`}}}
+ return {version,notes:'新增独立高清增强：自然降噪与细节增强，支持的 macOS 26 设备可使用 Apple 原生 AI 2×超分。固定浅色水印可按文字笔画精细修补，保留字缝背景，修正贴边图标残留。支持叠加处理和独立选区时间。',pub_date:date,platforms:{'darwin-aarch64':{signature:signature.trim(),url:`https://github.com/evanpanan/qingying/releases/download/v${version}/LightVid_${version}_aarch64.app.tar.gz`}}}
 }
 if(process.argv[1]&&resolve(process.argv[1])===new URL(import.meta.url).pathname){
  const key=process.env.TAURI_SIGNING_PRIVATE_KEY;if(!key)throw Error('缺少 TAURI_SIGNING_PRIVATE_KEY，请在 GitHub Actions Secrets 中配置')

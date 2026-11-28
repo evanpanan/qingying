@@ -23,7 +23,7 @@ export class DesktopRepair {
       signal.throwIfAborted();this.file=file;return job
     }catch(error){this.dispose();throw error}
   }
-  async run(file:RepairFile,mode:CleanupMode,regions:RepairRegion[],width:number,height:number,start:number,end:number,time:number,preview:boolean,onProgress:(value:number,text:string)=>void,signal:AbortSignal,translation?:TranslateOptions){
+  async run(file:RepairFile,mode:CleanupMode,regions:RepairRegion[],width:number,height:number,start:number,end:number,time:number,preview:boolean,onProgress:(value:number,text:string)=>void,signal:AbortSignal,translation?:Partial<TranslateOptions>){
     const job=await this.prepare(file,signal,onProgress)
     const off=await listen<{job:string;progress:number;text:string}>('repair-progress',event=>{if(event.payload.job===job)onProgress(event.payload.progress,event.payload.text)})
     const stop=()=>{void invoke('repair_cancel',{job}).catch(()=>{})}

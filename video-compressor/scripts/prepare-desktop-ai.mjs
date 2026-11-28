@@ -5,6 +5,7 @@ import {fileURLToPath} from 'node:url'
 import {dirname,resolve} from 'node:path'
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),runtime=resolve(root,'desktop-ai'),target=resolve(runtime,'models/lama_fp32.onnx')
 if(!process.env.TAURI_ENV_PLATFORM&&!process.argv.includes('--force'))process.exit(0)
+if(process.platform==='darwin'){const r=spawnSync(process.execPath,[resolve(root,'scripts/build-native-enhancement.mjs')],{cwd:root,stdio:'inherit'});if(r.status!==0)throw Error('无法准备原生高清增强引擎')}
 try{await access(resolve(runtime,'node_modules/onnxruntime-node/package.json'));await access(resolve(runtime,'node_modules/kokoro-js/package.json'));await access(resolve(runtime,'node_modules/@huggingface/transformers/package.json'))}catch{
  const result=spawnSync(process.platform==='win32'?'npm.cmd':'npm',['ci','--omit=dev','--no-audit','--no-fund'],{cwd:runtime,stdio:'inherit',shell:process.platform==='win32',env:{...process.env,ONNXRUNTIME_NODE_INSTALL_CUDA:'skip'}})
  if(result.status!==0)throw new Error('无法安装桌面 AI 引擎')

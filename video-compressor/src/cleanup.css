@@ -70,3 +70,5 @@
 .cleanup-capacity-note {font-size:11px;line-height:1.8;color:var(--muted);margin:14px 0;}
 
 .region-timing{display:grid;gap:8px;padding:12px 0;border-top:1px solid var(--line,#dde1d3);border-bottom:1px solid var(--line,#dde1d3)}.region-timing label{display:grid;gap:5px;font-size:12px}.region-timing input,.region-timing select{width:100%;min-width:0;padding:7px;border:1px solid #d8ddcf;border-radius:8px;background:#fff;color:#30382b}.region-timing small{font-size:11px;line-height:1.6;color:#78836e}.region-timing .quiet-button{white-space:normal}
+
+.enhancement-options{display:grid;gap:12px;border-top:1px solid #d8ddcf;padding-top:18px;margin-top:18px}.enhancement-options>label{display:grid;gap:7px}.enhancement-options>label:first-child{display:flex;align-items:center;gap:9px;font-weight:600}.enhancement-options input[type=checkbox]{accent-color:#738465}.enhancement-options select{width:100%;padding:10px;border:1px solid #d8ddcf;border-radius:8px;background:#fff;color:#30382b}.enhancement-options p,.enhancement-options small{font-size:12px;line-height:1.7;color:#78836e}.cleanup-goals>button:nth-child(5){grid-column:1/-1}

@@ -1,12 +1,12 @@
 import {validRegionTime,regionEnable} from '../../desktop-ai/region-time.mjs'
-export interface RepairRegion { kind?:'subtitle'|'watermark'; start?:number; end?:number; x: number; y: number; width: number; height: number }
+export interface RepairRegion { kind?:'subtitle'|'watermark'; fill?:'area'|'text'; start?:number; end?:number; x: number; y: number; width: number; height: number }
 export const MAX_REPAIR_REGIONS = 8
 export function validRegions(regions: RepairRegion[]) {
   return regions.length > 0 && regions.length <= MAX_REPAIR_REGIONS && regions.every(validRegion)
 }
-export type CleanupMode = 'quick' | 'ai' | 'subtitle-track' | 'translate'
+export type CleanupMode = 'quick' | 'ai' | 'subtitle-track' | 'translate' | 'enhance'
 export const SUBTITLE_REGION: RepairRegion = { kind:'subtitle', x: .08, y: .76, width: .84, height: .15 }
-export const WATERMARK_REGION: RepairRegion = { kind:'watermark', x: .76, y: .04, width: .2, height: .13 }
+export const WATERMARK_REGION: RepairRegion = { kind:'watermark', fill:'text', x: .76, y: .04, width: .2, height: .13 }
 export function validRegion(r: RepairRegion) {
   return validRegionTime(r) && [r.x,r.y,r.width,r.height].every(Number.isFinite) && r.x>=0 && r.y>=0 && r.width>0 && r.height>0 && r.x+r.width<=1.000001 && r.y+r.height<=1.000001
 }
