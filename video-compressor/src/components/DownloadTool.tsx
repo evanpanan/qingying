@@ -1,3 +1,4 @@
+import './download-tool.css'
 import {useDesktopTask} from '../lib/desktop-tasks'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { ArrowDown, ArrowUpRight, Check, Clipboard, Link2, X, FolderOpen, History, RotateCcw, Clock3, Play, ChevronUp } from 'lucide-react'
@@ -29,12 +30,18 @@ async function executeDownload(job: DownloadJob, signal: AbortSignal, onProgress
     const unlisten = await listen<{ task_id: string; progress: number }>('download-progress', event => {
       if (event.payload.task_id === job.id) onProgress(event.payload.progress)
     })
-    try { return await invoke<string>('native_download', { url: input.sourceUrl, taskId: job.id }) }
+    try { return await invoke<string>('native_download', { url: input.sourceUrl, taskId: job.id, outputFormat: input.outputFormat || 'original' }) }
     finally { unlisten() }
   }
   if (!input.mediaUrl) throw new Error('此作品请使用桌面版下载')
   let name = `${input.title.replace(/[\\/:*?"<>|\n\r]/g, '_').slice(0, 60)}${input.index === undefined ? '' : `_${input.index + 1}`}.${input.ext.replace(/[^a-z0-9]/gi, '')}`
-  const blob = await downloadMedia(`/api/proxy?url=${encodeURIComponent(input.mediaUrl)}`, signal, onProgress)
+  let blob = await downloadMedia(`/api/proxy?url=${encodeURIComponent(input.mediaUrl)}`, signal, value => onProgress(input.outputFormat === 'mp3' ? Math.round(value * .85) : value))
+  signal.throwIfAborted()
+  if (input.outputFormat === 'mp3') {
+    const {convertVideoWasm} = await import('../lib/ffmpeg.wasm')
+    const result = await convertVideoWasm(new File([blob], `source.${input.sourceExt || 'mp4'}`), 'mp3', value => onProgress(Math.min(99, 85 + Math.round(value * .14))))
+    blob = result
+  }
   signal.throwIfAborted()
   const imageExt: Record<string, string> = { 'image/webp': 'webp', 'image/png': 'png', 'image/jpeg': 'jpg' }
   const actualExt = imageExt[blob.type.split(';')[0] || '']
@@ -63,6 +70,7 @@ export default function DownloadTool({ guidanceKey = 0 }: { guidanceKey?: number
   const [clock, setClock] = useState(0)
   const [parseStarted, setParseStarted] = useState(0)
   const [selected, setSelected] = useState(0)
+  const [outputFormat, setOutputFormat] = useState<'original'|'mp3'>('original')
   const [queue] = useState(() => new DownloadQueue({ execute: executeDownload, onCompleted: rememberDownload }))
   const jobs = useSyncExternalStore(queue.subscribe, queue.getSnapshot, queue.getSnapshot)
   const [history, setHistory] = useState(loadDownloadHistory)
@@ -118,6 +126,7 @@ export default function DownloadTool({ guidanceKey = 0 }: { guidanceKey?: number
     setBusy(true)
     setData(null)
     setSelected(0)
+    setOutputFormat('original')
     setSourceUrl(url)
     const controller = new AbortController()
     requestRef.current = controller
@@ -145,13 +154,14 @@ export default function DownloadTool({ guidanceKey = 0 }: { guidanceKey?: number
   function save(url?: string, ext = 'mp4', index?: number) {
     if (!data) return
     const native = isTauri()
-    const type = data.type === 'image' ? 'image' : data.type === 'video' && (native || !current?.audioOnly) ? 'video' : 'audio'
-    queue.enqueue({ sourceUrl, title: data.title || '视频', type, mediaUrl: url, ext, index, native, parseMs: parseMs ?? undefined })
+    const type = outputFormat === 'mp3' && data.type !== 'image' ? 'audio' : data.type === 'image' ? 'image' : data.type === 'video' && (native || !current?.audioOnly) ? 'video' : 'audio'
+    queue.enqueue({ sourceUrl, title: data.title || '视频', type, mediaUrl: outputFormat === 'mp3' && data.type !== 'image' ? audioSource?.url : url, ext: outputFormat === 'mp3' && data.type !== 'image' ? 'mp3' : ext, sourceExt: audioSource?.ext, outputFormat: data.type === 'image' ? 'original' : outputFormat, index, native, parseMs: parseMs ?? undefined })
   }
 
   const formats = data?.formats?.length ? data.formats : data?.url ? [{ id: 'original', label: '原文件', url: data.url, ext: data.type === 'audio' ? 'm4a' : 'mp4' }] : []
   const current = formats[selected]
-  const currentJob = jobs.find(job => job.input.sourceUrl === sourceUrl && job.input.mediaUrl === current?.url && ['queued', 'downloading'].includes(job.status))
+  const audioSource = formats.find(f => f.audioOnly) || current
+  const currentJob = jobs.find(job => job.input.sourceUrl === sourceUrl && job.input.mediaUrl === (outputFormat === 'mp3' ? audioSource?.url : current?.url) && (job.input.outputFormat || 'original') === outputFormat && ['queued', 'downloading'].includes(job.status))
   const running = jobs.filter(job => job.status === 'downloading').length
   const waiting = jobs.filter(job => job.status === 'queued').length
   return (
@@ -169,16 +179,17 @@ export default function DownloadTool({ guidanceKey = 0 }: { guidanceKey?: number
         <button className="quiet-button" disabled={busy} onClick={async () => { try { setInput(await readClipboard()); fieldRef.current?.focus() } catch { setError('未允许读取剪贴板，请直接粘贴链接') } }}><Clipboard size={16} />粘贴</button>
         <span className="detected-platform">{platform?.name || '自动识别平台'}</span>
       </div>
-      <p className="download-platforms"><span>主要平台</span>抖音 · 小红书 · B站 · 快手 · YouTube · TikTok · X · Instagram</p>
+      <p className="download-platforms"><span>主要平台</span><span>抖音 · 小红书 · B站 · 快手 · YouTube · TikTok · X · Instagram</span></p>
       {(busy || parseMs !== null) && <p className="parse-timing" role="status"><Clock3 size={13} />{busy ? '解析中' : error ? '本次解析用时' : '解析完成'} · {formatElapsed(busy ? Math.max(0, clock - parseStarted) : parseMs ?? 0)}</p>}
       {error && <p className="tool-error" role="alert">{error}</p>}
       {data && <div className="download-result reveal">
         <div className="result-heading"><span className="eyebrow">{data.platformName} / {data.type === 'image' ? 'IMAGE' : 'MEDIA'}</span><h3 title={data.title}>{data.title || '你的文件已就绪'}</h3>{data.author && <p>{data.author}</p>}</div>
         {data.type === 'image' ? <div className="image-results">{data.images?.map((image, index) => <button key={`${index}-${image.url}`} onClick={() => save(image.url, 'jpg', index)} disabled={jobs.some(job => job.input.sourceUrl === sourceUrl && job.input.index === index && ['queued', 'downloading'].includes(job.status))}><img alt={`图片 ${index + 1}`} src={`/api/proxy?url=${encodeURIComponent(image.url)}`} loading="lazy" /><span><ArrowDown size={15} />保存 {index + 1}</span></button>)}</div> : <>
-          {!isTauri() && formats.length > 1 && <div className="format-choices">{formats.map((f, index) => <button key={f.id} className={index === selected ? 'selected' : ''} onClick={() => setSelected(index)}>{f.label}</button>)}</div>}
+          <div className="download-output" role="group" aria-label="下载内容"><button aria-pressed={outputFormat === 'original'} onClick={() => setOutputFormat('original')}>{data.type === 'audio' ? '原音频' : '视频'}</button><button aria-pressed={outputFormat === 'mp3'} onClick={() => setOutputFormat('mp3')}>MP3 音频</button><small>{outputFormat === 'mp3' ? '提取音频并生成 MP3 · 本机处理' : '保留原作品格式'}</small></div>
+          {outputFormat !== 'mp3' && !isTauri() && formats.length > 1 && <div className="format-choices">{formats.map((f, index) => <button key={f.id} className={index === selected ? 'selected' : ''} onClick={() => setSelected(index)}>{f.label}</button>)}</div>}
           <div className="result-actions">
           {!isTauri() && current && <button className="quiet-button preview-toggle" aria-expanded={previewOpen} aria-controls="download-preview" onClick={() => setPreviewOpen(value => !value)}>{previewOpen ? <ChevronUp size={16} /> : <Play size={16} />}{previewOpen ? '收起预览' : data.type === 'audio' || current.audioOnly ? '试听音频' : '预览视频'}</button>}
-          <button className="primary-button" disabled={Boolean(currentJob)} onClick={() => save(current?.url, current?.ext)}><ArrowDown size={18} />{currentJob ? currentJob.status === 'queued' ? '已加入下载队列' : `下载中${currentJob.progress !== null ? ` ${currentJob.progress}%` : ''}` : isTauri() ? data.type === 'audio' ? '保存音频' : '保存完整视频 · 最高 1080p' : `保存 ${current?.label || '文件'}`}</button>
+          <button className="primary-button" disabled={Boolean(currentJob)} onClick={() => save(current?.url, current?.ext)}><ArrowDown size={18} />{currentJob ? currentJob.status === 'queued' ? '已加入下载队列' : `下载中${currentJob.progress !== null ? ` ${currentJob.progress}%` : ''}` : outputFormat === 'mp3' ? '保存 MP3 音频' : isTauri() ? data.type === 'audio' ? '保存音频' : '保存完整视频 · 最高 1080p' : `保存 ${current?.label || '文件'}`}</button>
           </div>
           {!isTauri() && current && previewOpen && <div className="result-media" id="download-preview">{current.audioOnly || data.type === 'audio' ? <audio controls src={`/api/proxy?url=${encodeURIComponent(current.url)}`} /> : <video key={current.id} controls playsInline preload="metadata" src={`/api/proxy?url=${encodeURIComponent(current.url)}`} />}</div>}
         </>}
@@ -187,7 +198,7 @@ export default function DownloadTool({ guidanceKey = 0 }: { guidanceKey?: number
         <div className="download-jobs-heading"><h3>下载任务 <span>{running} 个下载中{waiting > 0 ? ` · ${waiting} 个等待中` : ''}</span></h3>{jobs.some(job => !['queued', 'downloading'].includes(job.status)) && <button className="quiet-button" onClick={() => queue.clearFinished()}>清理已结束</button>}</div>
         <p className="download-jobs-hint">同时下载 {DOWNLOAD_CONCURRENCY} 个，其余排队 · 合计不含预览、操作等待</p>
         <ol className="download-job-list">{[...jobs].reverse().map(job => <li className="download-job" key={job.id} data-job-id={job.id} data-status={job.status}>
-          <div className="download-job-top"><div className="download-job-name"><strong title={job.input.title}>{job.input.title}{job.input.index === undefined ? '' : ` · 图片 ${job.input.index + 1}`}</strong><small>{job.input.ext.toUpperCase()} · {job.status === 'queued' ? '等待下载' : job.status === 'downloading' ? `下载中${job.progress === null ? '' : ` ${job.progress}%`}` : job.status === 'done' ? '文件已保存' : job.status === 'cancelled' ? '已取消' : '下载失败'}</small></div><div className="download-job-actions">
+          <div className="download-job-top"><div className="download-job-name"><strong title={job.input.title}>{job.input.title}{job.input.index === undefined ? '' : ` · 图片 ${job.input.index + 1}`}</strong><small>{job.input.ext.toUpperCase()} · {job.status === 'queued' ? '等待下载' : job.status === 'downloading' ? job.input.outputFormat === 'mp3' && (job.progress ?? 0) >= 85 && !job.input.native ? `生成 MP3 ${job.progress}%` : `下载中${job.progress === null ? '' : ` ${job.progress}%`}` : job.status === 'done' ? '文件已保存' : job.status === 'cancelled' ? '已取消' : '下载失败'}</small></div><div className="download-job-actions">
             {job.status === 'done' && <Check size={17} aria-label="下载成功" />}
             {((job.status === 'downloading' && !job.input.native) || job.status === 'queued') && <button className="quiet-button" onClick={() => queue.cancel(job.id)} aria-label={`取消 ${job.input.title}`}><X size={15} />取消</button>}
             {['error', 'cancelled'].includes(job.status) && <button className="quiet-button" onClick={() => queue.retry(job.id)} aria-label={`重试 ${job.input.title}`}><RotateCcw size={15} />重试</button>}

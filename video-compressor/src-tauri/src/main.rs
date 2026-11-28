@@ -1,11 +1,11 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod library;
+mod repair;
+mod update_location;
 #[cfg(test)]
 mod updater_tests;
-mod repair;
-mod library;
-mod update_location;
 
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader};
@@ -371,7 +371,11 @@ fn downloader_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
 
 fn validate_share_url(url: &str) -> Result<(), String> {
     let parsed = tauri::Url::parse(url).map_err(|_| "链接格式不正确")?;
-    let host = parsed.host_str().unwrap_or("").trim_end_matches('.').to_lowercase();
+    let host = parsed
+        .host_str()
+        .unwrap_or("")
+        .trim_end_matches('.')
+        .to_lowercase();
     if parsed.scheme() != "https"
         || !parsed.username().is_empty()
         || parsed.password().is_some()
@@ -388,7 +392,11 @@ fn validate_share_url(url: &str) -> Result<(), String> {
 }
 
 fn javascript_runtime(engine: &std::path::Path) -> Result<String, String> {
-    let name = if cfg!(target_os = "windows") { "node.exe" } else { "node" };
+    let name = if cfg!(target_os = "windows") {
+        "node.exe"
+    } else {
+        "node"
+    };
     let runtime = engine.parent().ok_or("下载引擎目录异常")?.join(name);
     if !runtime.exists() {
         return Err("内置 JavaScript 引擎缺失，请安装最新版轻影".into());
@@ -449,13 +457,36 @@ async fn native_extract(app: tauri::AppHandle, url: String) -> Result<serde_json
     .map_err(|e| e.to_string())?
 }
 
+fn download_format_args(format: Option<&str>) -> Result<Vec<&'static str>, String> {
+    match format.unwrap_or("original") {
+        "original" => Ok(vec![
+            "-f",
+            "bv*[height<=1080]+ba/b[height<=1080]/b/ba",
+            "--merge-output-format",
+            "mp4",
+        ]),
+        "mp3" => Ok(vec![
+            "-f",
+            "ba/b",
+            "--extract-audio",
+            "--audio-format",
+            "mp3",
+            "--audio-quality",
+            "192K",
+        ]),
+        _ => Err("不支持的下载格式".into()),
+    }
+}
+
 #[tauri::command]
 async fn native_download(
     app: tauri::AppHandle,
     url: String,
     task_id: String,
+    output_format: Option<String>,
 ) -> Result<String, String> {
     validate_share_url(&url)?;
+    let format_args = download_format_args(output_format.as_deref())?;
     if !task_id
         .chars()
         .all(|c| c.is_ascii_alphanumeric() || c == '-')
@@ -496,19 +527,15 @@ async fn native_download(
                 "1",
                 "--ffmpeg-location",
                 &ffmpeg.to_string_lossy(),
-                "-f",
-                "bv*[height<=1080]+ba/b[height<=1080]/b/ba",
-                "--merge-output-format",
-                "mp4",
                 "--progress-template",
                 "download:LIGHTVID_PROGRESS:%(progress._percent_str)s",
                 "--print",
                 "after_move:LIGHTVID_FILE:%(filepath)s",
                 "-o",
                 &template,
-                "--",
-                &url,
             ])
+            .args(format_args)
+            .args(["--", &url])
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
             .spawn()
@@ -603,9 +630,13 @@ pub fn run() {
     tauri::Builder::default()
         .manage(repair::Jobs::default())
         .manage(repair::DroppedFiles::default())
-        .on_window_event(|window,event| {
-            if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop{paths,..})=event {
-                let state=window.state::<repair::DroppedFiles>();if let Ok(mut allowed)=state.0.lock(){allowed.clear();allowed.extend(paths.iter().filter_map(|p|p.canonicalize().ok()));};
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event {
+                let state = window.state::<repair::DroppedFiles>();
+                if let Ok(mut allowed) = state.0.lock() {
+                    allowed.clear();
+                    allowed.extend(paths.iter().filter_map(|p| p.canonicalize().ok()));
+                };
             }
         })
         .setup(|app| {
@@ -617,25 +648,41 @@ pub fn run() {
             use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
             // Retain standard macOS application, Edit and Window menus.
             let menu = Menu::default(app)?;
-            let tools = Submenu::with_items(app, "工具", true, &[
-                &MenuItem::with_id(app, "download", "视频下载", true, Some("CmdOrCtrl+1"))?,
-                &MenuItem::with_id(app, "cleanup", "画面修复", true, Some("CmdOrCtrl+2"))?,
-                &MenuItem::with_id(app, "convert", "格式转换", true, Some("CmdOrCtrl+3"))?,
-                &MenuItem::with_id(app, "compress", "视频压缩", true, Some("CmdOrCtrl+4"))?,
-                &PredefinedMenuItem::separator(app)?,
-            ])?;
+            let tools = Submenu::with_items(
+                app,
+                "工具",
+                true,
+                &[
+                    &MenuItem::with_id(app, "download", "视频下载", true, Some("CmdOrCtrl+1"))?,
+                    &MenuItem::with_id(app, "cleanup", "画面修复", true, Some("CmdOrCtrl+2"))?,
+                    &MenuItem::with_id(app, "convert", "格式转换", true, Some("CmdOrCtrl+3"))?,
+                    &MenuItem::with_id(app, "compress", "视频压缩", true, Some("CmdOrCtrl+4"))?,
+                    &PredefinedMenuItem::separator(app)?,
+                ],
+            )?;
             menu.append(&tools)?;
-            #[cfg(target_os="macos")]
+            #[cfg(target_os = "macos")]
             if let Some(tauri::menu::MenuItemKind::Submenu(app_menu)) = menu.items()?.first() {
-                app_menu.insert(&MenuItem::with_id(app, "check-update", "检查更新…", true, None::<&str>)?, 1)?;
+                app_menu.insert(
+                    &MenuItem::with_id(app, "check-update", "检查更新…", true, None::<&str>)?,
+                    1,
+                )?;
             }
-            #[cfg(not(target_os="macos"))]
-            tools.append(&MenuItem::with_id(app, "check-update", "检查更新…", true, None::<&str>)?)?;
+            #[cfg(not(target_os = "macos"))]
+            tools.append(&MenuItem::with_id(
+                app,
+                "check-update",
+                "检查更新…",
+                true,
+                None::<&str>,
+            )?)?;
             Ok(menu)
         })
         .on_menu_event(|app, event| {
             let id = event.id().as_ref();
-            if id == "check-update" { let _ = app.emit("desktop:check-update", ()); }
+            if id == "check-update" {
+                let _ = app.emit("desktop:check-update", ());
+            }
             if matches!(id, "download" | "convert" | "compress" | "cleanup") {
                 let _ = app.emit("desktop:navigate", id);
             }
@@ -646,9 +693,20 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .invoke_handler(tauri::generate_handler![
-            update_location::update_location, update_location::update_open_applications,
-            library::library_list, library::library_action, library::library_save,
-            repair::repair_import, repair::repair_begin, repair::repair_upload, repair::enhancement_support,repair::repair_run, repair::repair_cancel, repair::repair_preview, repair::repair_save, repair::repair_discard,
+            update_location::update_location,
+            update_location::update_open_applications,
+            library::library_list,
+            library::library_action,
+            library::library_save,
+            repair::repair_import,
+            repair::repair_begin,
+            repair::repair_upload,
+            repair::enhancement_support,
+            repair::repair_run,
+            repair::repair_cancel,
+            repair::repair_preview,
+            repair::repair_save,
+            repair::repair_discard,
             compress_video,
             convert_video,
             native_extract,
@@ -666,7 +724,19 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::validate_share_url;
+    use super::{download_format_args, validate_share_url};
+    #[test]
+    fn download_output_selects_real_mp3_encoding() {
+        let args = download_format_args(Some("mp3")).unwrap();
+        assert!(args.windows(2).any(|x| x == ["-f", "ba/b"]));
+        assert!(args.contains(&"--extract-audio"));
+        assert!(args.windows(2).any(|x| x == ["--audio-format", "mp3"]));
+        assert_eq!(
+            download_format_args(None).unwrap(),
+            download_format_args(Some("original")).unwrap()
+        );
+        assert!(download_format_args(Some("--exec")).is_err());
+    }
 
     #[test]
     fn accepts_public_sites_beyond_featured_list() {
@@ -699,4 +769,3 @@ mod tests {
         }
     }
 }
-

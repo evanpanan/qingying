@@ -135,3 +135,13 @@ test('用时按任务记录解析、排队与传输，重试仅计本轮且取�
   assert.deepEqual(queue.getSnapshot().find(j => j.id === second)!.timing, stopped)
   assert.equal(completed.length, 2)
 })
+
+test('同一作品的视频和 MP3 独立排队，重复 MP3 复用任务', () => {
+  const {queue} = harness()
+  const source = input('same')
+  const original = queue.enqueue({...source, outputFormat:'original'})
+  const mp3 = queue.enqueue({...source, type:'audio', ext:'mp3', outputFormat:'mp3'})
+  assert.notEqual(original, mp3)
+  assert.equal(queue.enqueue({...source,type:'audio',ext:'mp3',outputFormat:'mp3'}),mp3)
+  assert.equal(queue.getSnapshot().length,2)
+})

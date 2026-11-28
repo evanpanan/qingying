@@ -36,7 +36,7 @@ test('两排反向自动流动，没有播放控制且尊重系统动画偏好',
   assert.match(carousel, /direction="backward"/)
   assert.match(carousel, /!hovered && !focused/)
   assert.match(carousel, /onFocusCapture=/)
-  for (const file of ['src/components/HeroRibbon.tsx', 'src/components/PlatformCarousel.tsx', 'src/components/ExperienceGallery.tsx']) {
+  for (const file of ['src/components/HeroRibbon.tsx', 'src/components/PlatformCarousel.tsx']) {
     assert.doesNotMatch(source(file), /暂停|播放平台轮播|motion-toggle/)
   }
   const activity = source('src/lib/motion-activity.ts')
@@ -44,3 +44,4 @@ test('两排反向自动流动，没有播放控制且尊重系统动画偏好',
     assert(activity.includes(contract), contract)
   }
 })
+

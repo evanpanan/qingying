@@ -10,6 +10,8 @@ export interface DownloadInput {
   ext: string
   index?: number
   native: boolean
+  outputFormat?: 'original' | 'mp3'
+  sourceExt?: string
   parseMs?: number
 }
 
@@ -34,7 +36,7 @@ interface QueueOptions {
 
 function sameDownload(a: DownloadInput, b: DownloadInput) {
   return a.sourceUrl === b.sourceUrl && a.mediaUrl === b.mediaUrl &&
-    a.ext === b.ext && a.index === b.index && a.native === b.native
+    a.outputFormat === b.outputFormat && a.ext === b.ext && a.index === b.index && a.native === b.native
 }
 
 export class DownloadQueue {

@@ -5,7 +5,7 @@ import {resolve,join} from 'node:path'
 export function manifest(version,signature,date=new Date().toISOString()){
  if(!/^\d+\.\d+\.\d+$/.test(version))throw Error('发布版本无效')
  if(!signature.trim()||!/^[A-Za-z0-9+/=\s]+$/.test(signature))throw Error('缺少有效更新签名')
- return {version,notes:'新增独立高清增强：自然降噪与细节增强，支持的 macOS 26 设备可使用 Apple 原生 AI 2×超分。固定浅色水印可按文字笔画精细修补，保留字缝背景，修正贴边图标残留。支持叠加处理和独立选区时间。',pub_date:date,platforms:{'darwin-aarch64':{signature:signature.trim(),url:`https://github.com/evanpanan/qingying/releases/download/v${version}/LightVid_${version}_aarch64.app.tar.gz`}}}
+ return {version,notes:'下载新增 MP3 音频：本机编码，桌面优先获取音频流。全部下拉框统一为轻影菜单，支持键盘操作。官网全面更新为四张可轮换、展开的功能卡片，补齐画面修复、分时选区、高清增强与字幕配音介绍，优化平台提示间距和移动布局。',pub_date:date,platforms:{'darwin-aarch64':{signature:signature.trim(),url:`https://github.com/evanpanan/qingying/releases/download/v${version}/LightVid_${version}_aarch64.app.tar.gz`}}}
 }
 if(process.argv[1]&&resolve(process.argv[1])===new URL(import.meta.url).pathname){
  const key=process.env.TAURI_SIGNING_PRIVATE_KEY;if(!key)throw Error('缺少 TAURI_SIGNING_PRIVATE_KEY，请在 GitHub Actions Secrets 中配置')
