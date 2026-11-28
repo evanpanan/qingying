@@ -79,7 +79,7 @@ jobs:
         run: |
           app="$PWD/src-tauri/target/release/bundle/macos/轻影.app"
           codesign --verify --deep --strict --verbose=2 "$app"
-          LIGHTVID_UPDATE_ARCHIVE="$PWD/public/downloads/LightVid_1.10.0_aarch64.app.tar.gz" LIGHTVID_UPDATE_MANIFEST="$PWD/public/downloads/latest.json" cargo test --manifest-path src-tauri/Cargo.toml updater_tests::signed_update_rejects_tampering_and_replaces_only_app_bundle -- --exact
+          LIGHTVID_UPDATE_ARCHIVE="$PWD/public/downloads/LightVid_1.10.1_aarch64.app.tar.gz" LIGHTVID_UPDATE_MANIFEST="$PWD/public/downloads/latest.json" cargo test --manifest-path src-tauri/Cargo.toml updater_tests::signed_update_rejects_tampering_and_replaces_only_app_bundle -- --exact
           for engine in ffmpeg yt-dlp node; do
             test -x "$app/Contents/MacOS/$engine"
             if otool -L "$app/Contents/MacOS/$engine" | grep -E '/opt/homebrew|/usr/local/'; then
@@ -102,9 +102,9 @@ jobs:
           pkill -x lightvid
       - uses: actions/upload-artifact@v4
         with:
-          name: LightVid-macOS-1.10.0
+          name: LightVid-macOS-1.10.1
           path: |
-            video-compressor/public/downloads/轻影_1.10.0_aarch64.dmg
+            video-compressor/public/downloads/轻影_1.10.1_aarch64.dmg
             video-compressor/public/downloads/LightVid_*.app.tar.gz*
             video-compressor/public/downloads/latest.json
             ${{ runner.temp }}/desktop-launch.png
@@ -112,4 +112,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v1.10.0 public/downloads/轻影_1.10.0_aarch64.dmg public/downloads/LightVid_1.10.0_aarch64.app.tar.gz public/downloads/LightVid_1.10.0_aarch64.app.tar.gz.sig public/downloads/latest.json --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title '轻影 1.10.0 · MP3 下载与全新官网' --notes '更新日期：2026-11-28。下载增加 MP3 音频，网页本机编码，桌面优先音频流。所有下拉框统一为轻影菜单，支持键盘与触控。官网更新四张可轮换、展开的功能卡片，全面介绍画面修复、独立选区时间、高清增强、英文字幕与配音、格式转换与压缩。优化主要平台提示间距及手机布局。保留处理历史和模型缓存。适用于 Apple Silicon。'
+          gh release create v1.10.1 public/downloads/轻影_1.10.1_aarch64.dmg public/downloads/LightVid_1.10.1_aarch64.app.tar.gz public/downloads/LightVid_1.10.1_aarch64.app.tar.gz.sig public/downloads/latest.json --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title '轻影 1.10.1 · 紧凑修复工作台' --notes '更新日期：2026-11-28。修复去水印编辑区留白：时间轴与精确调整紧随视频，选区时间并排设置，压缩选区工具间距。官网按需功能改为左侧动画右侧文案，持续轮换、鼠标悬停响应，移除暂停按钮，展开也保持紧凑。'
